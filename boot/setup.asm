@@ -4,6 +4,7 @@
 ;这段代码询问bios有关内存/磁盘/其它参数，并将这些参数放到一个
 ;“安全的”地方：0x90000-0x901FF，也即原来bootsect代码块曾经在
 ;的地方，然后在被缓冲块覆盖掉之前由保护模式的system读取。
+
 [SECTION .data]
 INITSEG     equ 0x9000  ;bootsect所处的内存位置(段地址)
 SETUPSEG    equ 0x9020  ;setup.asm所在的段地址
@@ -71,6 +72,38 @@ no_disk1:
     mov ax, 0x00
     rep stosb
 is_disk1:
-    ;现在我们要进入保护模式了
+    ;现在要进入保护模式了
     cli     ;此时不允许中断
+
+    mov ax, SETUPSEG
+    mov ds, ax
+    lidt [idt_48]   ;加载中断描述符表寄存器(IDTR)
+    lgdt [gdt_48]   ;加载全局描述符表寄存器(GDTR)
+
     jmp $
+
+; 全局描述符表，描述符表由多个8字节长的描述符项组成。
+; 这里有3个描述符项。第1项无用，但必须存在。
+; 第2项是内核代码段描述符，第3项是内核数据段描述符。
+gdt:
+    dw 0, 0, 0, 0
+
+CODE_DESCRIPTOR:    ;这里在gdt表中的偏移量为0x08，当加载代码段寄存器（段选择符）时，使用的是这个偏移值。
+    dw 0x07FF
+    dw 0x0000
+    dw 0x9A00
+    dw 0x00C0
+
+DATA_DESCRIPTOR:    ;这里在gdt表中的偏移量是0x10，当加载数据段寄存器（ds）时，使用的是这个偏移值。
+    dw 0x07FF
+    dw 0x0000
+    dw 0x9200
+    dw 0x00C0
+
+idt_48:
+    dw 0
+    dw 0, 0
+
+gdt_48:
+    dw 0x800            ;gdt的大小, 256 GDT entries
+    dw 512+gdt, 0x9     ;gdt的位置 = 0x90200 + gdt
