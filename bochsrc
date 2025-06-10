@@ -1,0 +1,28 @@
+#设置要模拟的物理内存量,这里为32M
+megs:32
+
+# 对应真实机器的BIOS，这里使用bochs默认的bios
+romimage:file=$BXSHARE/BIOS-bochs-latest
+# 对应真实机器的VGA BIOS，即显卡bios，这里使用bochs默认的显卡bios
+vgaromimage:file=$BXSHARE/VGABIOS-lgpl-latest
+
+
+#设定引导顺序，这里设置为从硬盘开始引导，floppy表示软盘，disk表示硬盘
+boot:disk
+
+# ata0用于配置虚拟机的主ATA控制器（Primary ATA Controller）
+# enabled=true表示启用ATA控制器，ioaddr1和ioaddr2分别指定ata控制器的主要I/O端口和备用I/O端口的地址,irq指定中断请求线,这些都是规定好的
+# 一个ATA接口可以接两块硬盘，这里只接一块主盘
+ata0: enabled=true, ioaddr1=0x1f0, ioaddr2=0x3f0, irq=14
+ata0-master: type=disk, path="./build/hd.img", mode=flat
+ata0-slave: type=none
+
+#禁用鼠标
+mouse:enabled=0
+
+#keyboard用于配置键盘
+keyboard: keymap=$BXSHARE/keymaps/x11-pc-de.map
+
+magic_break: enabled=1
+display_library: x, options="gui_debug" # 配置bochs的gui，设置bochs的图形界面，启用图形化界面调试
+log: -
