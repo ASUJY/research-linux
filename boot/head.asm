@@ -26,6 +26,8 @@ _start:
     mov fs, ax
     mov gs, ax
 
+    xchg bx, bx
+    call main
     jmp $
 
 ;下面这段是设置中断描述符表子程序setup_idt
