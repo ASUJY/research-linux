@@ -75,6 +75,23 @@ is_disk1:
     ;现在要进入保护模式了
     cli     ;此时不允许中断
 
+    ;把整个system模块移动到0x00000位置，即把从0x10000到0x8ffff
+    ;的内存数据块（512k），整块地向内存低端移动了0x10000（64k）的位置。
+    mov ax, 0x0000
+    cld
+do_move:
+    mov es, ax
+    add ax, 0x1000
+    cmp ax, 0x9000      ;已经把从0x8000段开始的64k代码移动完了吗？
+    jz end_move
+    mov ds, ax
+    sub di, di
+    sub si, si
+    mov cx, 0x8000      ;移动0x8000字(64KB)
+    rep movsw
+    jmp do_move
+
+end_move:
     mov ax, SETUPSEG
     mov ds, ax
     lidt [idt_48]   ;加载中断描述符表寄存器(IDTR)
@@ -93,7 +110,7 @@ is_disk1:
     mov ax, 0x0001
     lmsw ax
 
-    jmp $
+    jmp 8:0
 
 empty_8042:
     dw 0x00eb, 0x00eb   ;相当于空转指令（NOP操作），确保8042控制器有足够时间响应
