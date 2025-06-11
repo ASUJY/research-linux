@@ -89,6 +89,10 @@ is_disk1:
     out 0x60, al
     call empty_8042
 
+    ;将cr0寄存器的 位0 置1，进入32位保护模式
+    mov ax, 0x0001
+    lmsw ax
+
     jmp $
 
 empty_8042:
