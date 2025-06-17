@@ -14,8 +14,9 @@ ${BUILD}/system.bin: ${BUILD}/kernel.bin
 	@objcopy -O binary ${BUILD}/kernel.bin ${BUILD}/system.bin
 	@nm ${BUILD}/kernel.bin | sort > ${BUILD}/system.map
 
-${BUILD}/kernel.bin: ${BUILD}/boot/head.o $(BUILD)/init/main.o
-	@ld -m elf_i386 $^ -o $@ -Ttext 0x00000000
+${BUILD}/kernel.bin: ${BUILD}/boot/head.o $(BUILD)/init/main.o $(BUILD)/kernel/kernel.o $(BUILD)/kernel/chr_drv/chr_drv.a\
+	$(BUILD)/lib/lib.a
+	@ld $(LDFLAGS) --start-group $^ --end-group -o $@ -Ttext 0x00000000
 
 $(BUILD)/init/main.o: init/main.c
 	@$(MAKE) -C init
@@ -23,11 +24,36 @@ $(BUILD)/init/main.o: init/main.c
 Boot:
 	@$(MAKE) -C boot
 
+$(BUILD)/kernel/kernel.o:
+	@$(MAKE) -C kernel
+
+$(BUILD)/kernel/chr_drv/chr_drv.a:
+	@$(MAKE) -C kernel/chr_drv
+
+$(BUILD)/lib/lib.a:
+	@$(MAKE) -C lib
+
+
 clean:
 	@rm -rf ${BUILD} bx_enh_dbg.ini
 	@$(MAKE) -C boot clean
 	@$(MAKE) -C init clean
-
+	@$(MAKE) -C kernel clean
+	@$(MAKE) -C kernel/chr_drv clean
+	@$(MAKE) -C lib clean
 
 bochs:
 	bochs -q -f bochsrc
+
+qemug: clean all
+	qemu-system-i386 \
+		-m 32M \
+		-boot c \
+		-hda ./build/hd.img \
+		-s -S
+
+qemu: clean all
+	qemu-system-i386 \
+	-m 32M \
+	-boot c \
+	-hda ./build/hd.img

@@ -5,9 +5,10 @@
 [SECTION .text]
 [BITS 32]
 extern main
+extern stack_start
 
-global _start
-_start:
+global startup_32
+startup_32:
     ;这里$0x10的含义是请求特权级0（位0-1=0）、选择全局描述符表（位2=0）、选择表中第2项（位3-15=2）。
     ;它正好指向表中的数据段描述符项。
     ;置ds，es，fs，gs中的选择符为setup.asm中构造的数据段（全局段描述符表的第2项）=0x10
@@ -16,6 +17,7 @@ _start:
     mov es, ax
     mov fs, ax
     mov gs, ax
+    lss esp, [stack_start]  ;设置内核的栈段
 
     call setup_idt  ;设置中断描述符
     call setup_gdt  ;设置全局描述符
@@ -25,10 +27,11 @@ _start:
     mov es, ax
     mov fs, ax
     mov gs, ax
+    lss esp, [stack_start]
 
-    xchg bx, bx
-    call main
-    jmp $
+    jmp after_page_tables
+    ;call main
+    ;jmp $
 
 ;下面这段是设置中断描述符表子程序setup_idt
 ;将中断描述符表idt设置成具有256个项，并都指向ignore_int中断门。
@@ -60,6 +63,16 @@ setup_gdt:
     lgdt [gdt_descr]        ;加载全局描述符表寄存器
     ret
 
+after_page_tables:
+    push 0  ;envp
+    push 0  ;argv
+    push 0  ;argc
+    push L6     ;main函数退出时会到L6处继续执行，也即死循环
+    push main   ;因为main.c中的main函数没有用到参数，所以都压入0
+    jmp setup_paging
+L6:
+    jmp L6
+
 ignore_int:
     push eax
     push ecx
@@ -82,6 +95,9 @@ ignore_int:
     pop eax
     iret            ;中断返回(把中断调用时压入栈的CPU标志寄存器(32位)值也弹出)。
 
+setup_paging:
+    ret
+
 idt_descr:              ;下面两行是lidt指令的6字节操作数:长度，基址
     dw 256 * 8 - 1      ;idt contains 256 entries
     dd _idt
@@ -99,7 +115,7 @@ _idt:
 ;(0-nul，l-cs，2-ds，3-sys，4-TSS0，5-LDT0，6-TSS1，7-LDT1，8-TSS2 etc...)
 _gdt:
     dq 0x0000000000000000    ;NULL descriptor
-    dq 0x00c09a0000000fff    ;16Mb, 0x08,内核代码段最大长度16Mb
-    dq 0x00c0920000000fff    ;16Mb, 0x10,内核数据段最大长度16Mb
+    dq 0x00c09a0000000fff    ;base addrees:0x0000 内核代码段最大长度16Mb, 0x08
+    dq 0x00c0920000000fff    ;base addrees:0x0000 内核数据段最大长度16Mb, 0x10
     dq 0x0000000000000000    ;TEMPORARY - don't use
     times 252 dq 0           ;space for LDT's and TSS's etc
