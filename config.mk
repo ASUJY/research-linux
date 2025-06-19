@@ -12,9 +12,11 @@ CFLAGS+= -Wall
 CFLAGS:=$(strip ${CFLAGS})
 
 LDFLAGS := -m elf_i386
+ASFLAGS := --32
 
 DEBUG:= -g
 DEBUG+= -O0
 export CFLAGS
 export DEBUG
 export LDFLAGS
+export ASFLAGS

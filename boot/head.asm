@@ -6,7 +6,7 @@
 [BITS 32]
 extern main
 extern stack_start
-
+global _idt
 global startup_32
 startup_32:
     ;这里$0x10的含义是请求特权级0（位0-1=0）、选择全局描述符表（位2=0）、选择表中第2项（位3-15=2）。

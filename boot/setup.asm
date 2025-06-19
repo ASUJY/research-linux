@@ -106,6 +106,36 @@ end_move:
     out 0x60, al
     call empty_8042
 
+    ;对8259A芯片进行编程，以响应中断
+.config_8259a:
+    mov al, 0x11
+    out 0x20, al        ; 向主8259a芯片发送ICW1
+    dw 0x00eb, 0x00eb   ; 相当于空转指令（NOP操作），确保8259A芯片有足够时间响应，以前的旧硬件比较慢
+    out 0xA0, al        ; 向从8259a芯片发送ICW1
+    dw 0x00eb, 0x00eb
+    mov al, 0x20        ; 向主8259a芯片发送ICW2
+    out 0x21, al
+    dw 0x00eb, 0x00eb
+    mov al, 0x28        ; 向从8259a芯片发送ICW2
+    out 0xA1, al
+    dw 0x00eb, 0x00eb
+    mov al, 0x04
+    out 0x21, al        ; 向主8259a芯片发送ICW3
+    dw 0x00eb, 0x00eb
+    mov al, 0x02
+    out 0xA1, al        ; 向从8259a芯片发送ICW3
+    dw 0x00eb, 0x00eb
+    mov al, 0x01        ; 向主8259a芯片发送ICW4
+    out 0x21, al
+    dw 0x00eb, 0x00eb
+    out 0xA1, al        ; 向从8259a芯片发送ICW4
+    dw 0x00eb, 0x00eb
+    mov al, 0xFF        ; 屏蔽主芯片的所有中断（硬件中断，即屏蔽的是20-31的中断向量号，其他中断向量号没有屏蔽）
+    out 0x21, al
+    dw 0x00eb, 0x00eb
+    out 0xA1, al        ; 屏蔽从芯片所有中断响应
+
+
     ;将cr0寄存器的 位0 置1，进入32位保护模式
     mov ax, 0x0001
     lmsw ax

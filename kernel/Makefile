@@ -1,10 +1,10 @@
-OBJS := printk.o vsprintf.o sched.o
+OBJS := printk.o vsprintf.o sched.o system_call.o
 KERNEL_BUILD_DIR := $(BUILD)/kernel
 CFLAGS := $(CFLAGS) -I../include/ -I../include/linux
 .c.s:
 	@$(CC) $(CFLAGS) $(DEBUG) -S -o $*.s $<
 .s.o:
-	@$(AS) -o $*.o $<
+	@$(AS) $(ASFLAGS) -o $*.o $<
 .c.o:
 	$(CC) $(CFLAGS) $(DEBUG) -c -o $*.o $<
 
