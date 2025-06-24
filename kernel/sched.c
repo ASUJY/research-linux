@@ -6,6 +6,13 @@
 #include <asm/io.h>
 #include <asm/system.h>
 
+void show_stat(void)
+{
+    int i;
+
+
+}
+
 #define PAGE_SIZE 4096
 
 extern int timer_interrupt(void);
@@ -19,5 +26,5 @@ struct {
 
 void sched_init(void) {
     set_intr_gate(0x20, &timer_interrupt);  // 设置中断向量0x20的中断描述符(时钟中断)
-    outb(inb_p(0x21)&~0x01, 0x21);          // 允许时钟中断信号通过8259a芯片送往CPU
+    //outb(inb_p(0x21)&~0x01, 0x21);          // 允许时钟中断信号通过8259a芯片送往CPU
 }

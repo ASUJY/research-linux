@@ -39,6 +39,16 @@ struct tty_struct tty_table[1] = {
     }
 };
 
+/*
+ * these are the tables used by the machine code handlers.
+ * you can implement pseudo-tty's or something by changing
+ * them. Currently not done.
+ * 这是keyboard.S使用的缓冲队列地址表。
+ */
+struct tty_queue * table_list[]={
+    &tty_table[0].read_q, &tty_table[0].write_q // 控制台终端的读、写缓冲队列地址
+    };
+
 void tty_init(void) {
     con_init();
 }
@@ -169,4 +179,27 @@ int tty_write(unsigned channel, char * buf, int nr) {
         tty->write(tty);
     }
     return (b - buf);
+}
+
+/*
+ * Jeh, sometimes I really like the 386.
+ * This routine is called from an interrupt,
+ * and there should be absolutely no problem
+ * with sleeping even in an interrupt (I hope).
+ * Of course, if somebody proves me wrong, I'll
+ * hate intel for all time :-). We'll have to
+ * be careful and see to reinstating the interrupt
+ * chips before calling this, though.
+ *
+ * I don't think we sleep here under normal circumstances
+ * anyway, which is good, as the task sleeping might be
+ * totally innocent.
+ */
+/**
+ * tty中断例程调用的函数，用于输出字符
+ * @param tty tty终端号
+ */
+void do_tty_interrupt(int tty)
+{
+    copy_to_cooked(tty_table + tty);
 }

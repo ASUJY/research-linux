@@ -21,6 +21,8 @@
 
 #define NPAR 16
 
+extern void keyboard_interrupt(void);
+
 static unsigned char	video_type;         // 使用的显示类型
 static unsigned long	video_num_columns;	// 屏幕文本列数
 static unsigned long	video_size_row;		// 每行使用的字节数
@@ -673,6 +675,7 @@ void con_write(struct tty_struct *tty) {
  * 设置显卡的索引寄存器和数据寄存器端口
  */
 void con_init(void) {
+    register unsigned char a;
     char *display_desc = "????";
     char *display_ptr;
 
@@ -734,6 +737,11 @@ void con_init(void) {
     bottom	= video_num_lines;
 
     gotoxy(ORIG_X,ORIG_Y);  // 初始化光标位置x,y和对应的内存位置pos
+    set_trap_gate(0x21, &keyboard_interrupt);   // 设置中断向量0x21的中断描述符(键盘中断)
+    outb_p(inb_p(0x21)&0xfd, 0x21);             // 允许键盘中断信号通过8259a芯片送往CPU
+    a=inb_p(0x61);                              // 读取键盘端口0x61(8255A端口PB)
+    outb_p(a|0x80, 0x61);                       // 设置禁止键盘工作(位7置位)
+    outb(a, 0x61);                              // 允许键盘工作，复位键盘
 }
 
 int beepcount = 0;

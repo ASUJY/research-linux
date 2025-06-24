@@ -24,4 +24,8 @@ __asm__ ("movw %%dx,%%ax\n\t" \
 #define set_intr_gate(n,addr) \
 	_set_gate(&_idt[n],14,0,addr)
 
+// 设置陷阱门描述符
+#define set_trap_gate(n,addr) \
+	_set_gate(&_idt[n],15,0,addr)
+
 #endif //RESEARCH_LINUX_SYSTEM_H
