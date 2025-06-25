@@ -10,5 +10,6 @@
 #define HZ 100
 
 extern void sched_init(void);
+extern void trap_init(void);
 
 #endif //RESEARCH_LINUX_SCHED_H

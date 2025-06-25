@@ -5,8 +5,10 @@
 
 void main(void)		/* This really IS void, no error here. */
 {
-    sched_init();
+    trap_init();
     tty_init();
+    sched_init();
     printk("Hi OneOS!\n");
     sti();
+    int a = 5 / 0;
 }
