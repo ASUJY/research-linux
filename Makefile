@@ -1,5 +1,11 @@
 include config.mk
 
+#
+# if you want the ram-disk device, define this to be the
+# size in blocks.
+#
+RAMDISK = #-DRAMDISK=512
+
 BUILD:=$(CURDIR)/build
 export BUILD
 HD_IMG_NAME:="hd.img"
@@ -15,7 +21,7 @@ ${BUILD}/system.bin: ${BUILD}/kernel.bin
 	@nm ${BUILD}/kernel.bin | sort > ${BUILD}/system.map
 
 ${BUILD}/kernel.bin: ${BUILD}/boot/head.o $(BUILD)/init/main.o $(BUILD)/kernel/kernel.o $(BUILD)/kernel/chr_drv/chr_drv.a\
-	$(BUILD)/lib/lib.a
+	$(BUILD)/lib/lib.a $(BUILD)/kernel/blk_drv/blk_drv.a
 	@ld $(LDFLAGS) --start-group $^ --end-group -o $@ -Ttext 0x00000000
 
 $(BUILD)/init/main.o: init/main.c
@@ -30,6 +36,9 @@ $(BUILD)/kernel/kernel.o:
 $(BUILD)/kernel/chr_drv/chr_drv.a:
 	@$(MAKE) -C kernel/chr_drv
 
+$(BUILD)/kernel/blk_drv/blk_drv.a:
+	@$(MAKE) -C kernel/blk_drv
+
 $(BUILD)/lib/lib.a:
 	@$(MAKE) -C lib
 
@@ -40,6 +49,7 @@ clean:
 	@$(MAKE) -C init clean
 	@$(MAKE) -C kernel clean
 	@$(MAKE) -C kernel/chr_drv clean
+	@$(MAKE) -C kernel/blk_drv clean
 	@$(MAKE) -C lib clean
 
 bochs:
