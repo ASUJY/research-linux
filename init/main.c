@@ -2,6 +2,7 @@
 #include <linux/tty.h>
 #include <linux/sched.h>
 #include <asm/system.h>
+#include <linux/mm.h>
 
 extern void mem_init(long start, long end);
 extern long rd_init(long mem_start, int length);
@@ -43,9 +44,19 @@ void main(void)		/* This really IS void, no error here. */
 #endif
 
     mem_init(main_memory_start, memory_end);
+
+
     trap_init();
     tty_init();
     sched_init();
     printk("Hi OneOS!\n");
+
+    void *p = get_free_page();      // 申请物理内存
+    void *p1 = get_free_page();
+    printk("%p\n", p);
+    printk("%p\n", p1);
+    free_page(p);                   // 释放物理内存
+    free_page(p1);
+
     sti();
 }

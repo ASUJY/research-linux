@@ -9,6 +9,7 @@
 #ifndef RESEARCH_LINUX_KERNEL_H
 #define RESEARCH_LINUX_KERNEL_H
 
+volatile void panic(const char * str);
 int printk(const char * fmt, ...);
 
 #endif //RESEARCH_LINUX_KERNEL_H

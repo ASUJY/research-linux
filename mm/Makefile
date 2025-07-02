@@ -1,6 +1,6 @@
 OBJS := memory.o
 MM_BUILD_DIR := $(BUILD)/mm
-
+CFLAGS := $(CFLAGS) -I../include/
 .c.s:
 	@$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
