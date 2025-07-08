@@ -4,6 +4,7 @@
 
 [SECTION .text]
 [BITS 32]
+_pg_dir:    ;页目录会存放到这里
 extern main
 extern stack_start
 global _idt
@@ -28,6 +29,14 @@ startup_32:
     mov fs, ax
     mov gs, ax
     lss esp, [stack_start]
+
+    ;测试A20地址线是否已经开启
+    xor eax, eax
+a1:
+    inc eax
+    mov dword [0x000000], eax
+    cmp eax, dword [0x100000]
+    je a1
 
     jmp after_page_tables
     ;call main
@@ -63,6 +72,16 @@ setup_gdt:
     lgdt [gdt_descr]        ;加载全局描述符表寄存器
     ret
 
+times 4096 - ($ - $$) db 0
+pg0:
+    resb 4096
+pg1:
+    resb 4096
+pg2:
+    resb 4096
+pg3:
+    resb 4096
+
 after_page_tables:
     push 0  ;envp
     push 0  ;argv
@@ -95,8 +114,38 @@ ignore_int:
     pop eax
     iret            ;中断返回(把中断调用时压入栈的CPU标志寄存器(32位)值也弹出)。
 
+align 2
 setup_paging:
+    mov ecx, 1024 * 5
+    xor eax, eax
+    xor edi, edi
+    cld
+    rep stosd
+
+    ; 设置页目录项，指向4个页表并标记为存在+用户可读写
+    mov dword [_pg_dir], pg0 + 7
+    mov dword [_pg_dir + 4], pg1 + 7
+    mov dword [_pg_dir + 8], pg2 + 7
+    mov dword [_pg_dir + 12], pg3 + 7
+
+    ;填充页表项
+    mov edi, pg3 + 4092
+    mov eax, 00fff007h
+    std
+b1:
+    stosd
+    sub eax, 1000h
+    jge b1
+
+    ;启用分页
+    xor eax, eax
+    mov cr3, eax        ; CR3=0（页目录物理地址为0x0000）
+    mov eax, cr0
+    or eax, 80000000h   ;设置CR0.PG位（开启分页）
+    mov cr0, eax
+    xchg bx, bx
     ret
+
 
 idt_descr:              ;下面两行是lidt指令的6字节操作数:长度，基址
     dw 256 * 8 - 1      ;idt contains 256 entries
