@@ -51,12 +51,15 @@ void main(void)		/* This really IS void, no error here. */
     sched_init();
     printk("Hi OneOS!\n");
 
-    void *p = get_free_page();      // 申请物理内存
-    void *p1 = get_free_page();
+    void *p = kmalloc(20);      // 申请物理内存
+    void *p1 = kmalloc(20);      // 申请物理内存
+    void *p2 = kmalloc(16);      // 申请物理内存
     printk("%p\n", p);
     printk("%p\n", p1);
-    free_page(p);                   // 释放物理内存
-    free_page(p1);
+    printk("%p\n", p2);
+    kfree_s(p, 20);
+    kfree_s(p1, 20);
+    kfree_s(p2, 16);
 
     sti();
 }

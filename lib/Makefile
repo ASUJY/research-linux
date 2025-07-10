@@ -1,4 +1,4 @@
-OBJS := ctype.o
+OBJS := ctype.o malloc.o
 LIB_BUILD_DIR := $(BUILD)/lib
 CFLAGS := $(CFLAGS) -I../include/
 

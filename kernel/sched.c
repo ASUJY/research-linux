@@ -2,9 +2,10 @@
 // Created by asujy on 2025/6/13.
 //
 
+#include <linux/sched.h>
 #include <linux/head.h>
-#include <asm/io.h>
 #include <asm/system.h>
+
 
 void show_stat(void)
 {
@@ -12,8 +13,6 @@ void show_stat(void)
 
 
 }
-
-#define PAGE_SIZE 4096
 
 extern int timer_interrupt(void);
 

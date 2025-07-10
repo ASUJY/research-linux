@@ -6,6 +6,7 @@
 #define RESEARCH_LINUX_SCHED_H
 
 #include <linux/head.h>
+#include <linux/mm.h>
 
 #define HZ 100
 
