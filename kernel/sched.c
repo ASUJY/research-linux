@@ -28,6 +28,10 @@ union task_union {
 // 任务0
 static union task_union init_task = {INIT_TASK,};
 
+long volatile jiffies=0;                            // (滴答数)每10毫秒加1
+struct task_struct *current = &(init_task.task);    // 当前任务（初始化为0号任务）
+struct task_struct *last_task_used_math = NULL;     // 使用过协处理器的任务
+
 // 任务列表(进程列表，用来管理进程)
 struct task_struct * task[NR_TASKS] = {&(init_task.task), };
 
@@ -37,6 +41,101 @@ struct {
     long * a;   // 指向栈顶的指针，即esp
     short b;    // 段选择子
 } stack_start = { & user_stack [PAGE_SIZE>>2] , 0x10 };
+
+/*
+ *  'schedule()' 是调度函数，它可以在所有的环境下工作（比如能够对IO-边界处理很好的响应等）
+ *
+ *  注意，任务0(0号进程)是个闲置(idle)任务，只有当没有其它任务可以运行时才调用它。它不能被杀死，
+ *  也不能睡眠。任务0中的状态信息state是从来不用的！
+ */
+void schedule(void) {
+    int i;
+    int next;
+    int c;
+    struct task_struct **p;
+
+    /* 以下是调度程序的主要部分 */
+    while (1) {
+        c = -1;
+        next = 0;
+        i = NR_TASKS;
+        p = &task[NR_TASKS];
+
+        /**
+         * 从任务数组的最后一个任务开始循环处理，并跳过不含任务的数组槽。
+         * 比较每个就绪状态(可以运行的)任务的counter值(任务运行的时间片)，哪个值大就运行哪个。
+         */
+        while (--i) {
+            if (!*--p) {
+                continue;
+            }
+            if ((*p)->state == TASK_RUNNING && (*p)->counter > c) {
+                c = (*p)->counter;
+                next = i;
+            }
+        }
+        if (c) {
+            break;  // 如果有counter值大于0的任务，则执行任务切换
+        }
+
+        /**
+         * 根据每个任务的优先级，更新每一个任务的counter值(时间片)。
+         * counter = counter / 2 + priority
+         */
+        for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
+            if (*p) {
+                (*p)->counter = ((*p)->counter >> 1) + (*p)->priority;
+            }
+        }
+    }
+
+    switch_to(next);    // 切换到任务号为next的任务，并执行这个任务
+}
+
+#define TIME_REQUESTS 64
+
+static struct timer_list {
+    long jiffies;
+    void (*fn)();
+    struct timer_list * next;
+} timer_list[TIME_REQUESTS], * next_timer = NULL;
+
+void do_timer(long cpl){
+    // 如果当前特权级(cpl)为0，则将当前进程的内核态运行时间stime加1，否则增加用户态运行时间utime
+    if (cpl) {
+        current->utime++;
+    } else {
+        current->stime++;
+    }
+
+    /**
+    * 如果有用户的定时器存在，则将链表第1个定时器的值减1。如果已等于0，则调用相应的处理
+    * 程序，并将该处理程序指针置为空。然后去掉该项定时器。
+    * next_timer是定时器链表的头指针。
+     */
+    if (next_timer) {
+        next_timer->jiffies--;
+        while (next_timer && next_timer->jiffies <= 0) {
+            void (*fn)(void);
+
+            fn = next_timer->fn;
+            next_timer->fn = NULL;
+            next_timer = next_timer->next;
+            (fn)();
+        }
+    }
+
+    // 进程运行时间还没用完，则直接返回
+    if ((--current->counter) > 0) {
+        return;
+    }
+    current->counter = 0;
+    if (!cpl) {
+        return; // 对于内核态程序，不依赖counter值进行调度，直接返回。
+    }
+
+    schedule();
+}
 
 void sched_init(void) {
     int i;

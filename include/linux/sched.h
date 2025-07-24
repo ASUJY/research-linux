@@ -8,12 +8,23 @@
 #define NR_TASKS 64     // 系统中同时存在的最大进程数量
 #define HZ 100          // 时钟滴答频率（100赫兹表示每个滴答10ms）
 
+#define FIRST_TASK task[0]
+#define LAST_TASK task[NR_TASKS-1]
+
 #include <linux/head.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
 #include <signal.h>
 
+// 进程(任务)运行状态
+#define TASK_RUNNING		0
+#define TASK_INTERRUPTIBLE	1
+#define TASK_UNINTERRUPTIBLE	2
+#define TASK_ZOMBIE		3
+#define TASK_STOPPED		4
+
 extern void sched_init(void);
+extern void schedule(void);
 extern void trap_init(void);
 
 /**
@@ -138,6 +149,8 @@ _LDT(0),0x80000000, \
 }, \
 }
 
+extern long volatile jiffies;
+
 #define FIRST_TSS_ENTRY 4
 #define FIRST_LDT_ENTRY (FIRST_TSS_ENTRY+1)
 // 计算在GDT表中第n个任务(进程)的TSS描述符的索引号
@@ -146,5 +159,25 @@ _LDT(0),0x80000000, \
 // 加载第n个任务(进程)的任务寄存器tr
 #define ltr(n) __asm__("ltr %%ax"::"a" (_TSS(n)))
 #define lldt(n) __asm__("lldt %%ax"::"a" (_LDT(n)))
+
+/*
+ *	switch_to(n) 将切换当前任务到任务n。首先检测任务n是不是当前任务，
+ *	如果是则直接返回。如果切换到的任务最近使用过数学协处理器，则需要复位
+ *	控制寄存器cr0中的TS标志位。
+ */
+#define switch_to(n) {\
+struct {long a,b;} __tmp; \
+__asm__("cmpl %%ecx, current\n\t" \
+"je 1f\n\t" \
+"movw %%dx, %1\n\t" \
+"xchgl %%ecx, current\n\t" \
+"ljmp %0\n\t" \
+"cmpl %%ecx, last_task_used_math\n\t" \
+"jne 1f\n\t" \
+"clts\n" \
+"1:" \
+::"m" (*&__tmp.a),"m" (*&__tmp.b), \
+"d" (_TSS(n)),"c" ((long) task[n])); \
+}
 
 #endif //RESEARCH_LINUX_SCHED_H
