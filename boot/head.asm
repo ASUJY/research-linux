@@ -4,11 +4,13 @@
 
 [SECTION .text]
 [BITS 32]
-_pg_dir:    ;页目录会存放到这里
 extern main
 extern stack_start
 global _idt
+global _gdt
+global _pg_dir
 global startup_32
+_pg_dir:    ;页目录会存放到这里
 startup_32:
     ;这里$0x10的含义是请求特权级0（位0-1=0）、选择全局描述符表（位2=0）、选择表中第2项（位3-15=2）。
     ;它正好指向表中的数据段描述符项。
