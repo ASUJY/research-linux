@@ -3,6 +3,7 @@
 //
 
 #include <linux/sched.h>
+#include <linux/sys.h>
 #include <linux/head.h>
 #include <asm/system.h>
 #include <asm/io.h>
@@ -166,5 +167,5 @@ void sched_init(void) {
 
     set_intr_gate(0x20, &timer_interrupt);  // 设置中断向量0x20的中断描述符(时钟中断，每次定时器向 CPU 发出中断后，便会执行这个函数)
     outb(inb_p(0x21)&~0x01, 0x21);          // 允许时钟中断信号通过8259a芯片送往CPU
-    //set_system_gate(0x80,&system_call);   // 设置中断向量0x80的中断描述符(系统调用system_call，用户态程序想要调用内核提供的方法，都需要基于这个系统调用来进行)
+    set_system_gate(0x80, &system_call);   // 设置中断向量0x80的中断描述符(系统调用system_call，用户态程序想要调用内核提供的方法，都需要基于这个系统调用来进行)
 }

@@ -27,6 +27,8 @@ extern void sched_init(void);
 extern void schedule(void);
 extern void trap_init(void);
 
+typedef int (*fn_ptr)();
+
 /**
  * 数学协处理器使用的结构，用于保存进程切换时i387的执行状态信息
  */

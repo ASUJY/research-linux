@@ -2,9 +2,57 @@
 # 堆栈中各个寄存器的偏移位置
 CS		= 0x20
 
+# task_struct中变量的偏移值
+state	= 0
+counter	= 4
 
-.global timer_interrupt
+nr_system_calls = 72    # 系统调用总数量
 
+.global system_call,sys_fork,timer_interrupt
+
+# 系统调用出错，设置错误码为-1
+.align 2
+bad_sys_call:
+    movl $-1, %eax
+    iret
+
+# 重新执行调度程序
+.align 2
+reschedule:
+	pushl $ret_from_sys_call
+	jmp schedule
+
+# 0x80系统调用入口点
+.align 2
+system_call:
+    cmpl $nr_system_calls - 1, %eax # 调用号如果超出范围的话，就调用bad_sys_call
+    ja bad_sys_call
+
+    push %ds
+    push %es
+    push %fs
+    pushl %edx
+    pushl %ecx		# push %ebx,%ecx,%edx as parameters to the system call
+    pushl %ebx
+
+    # 设置ds,es为内核数据段选择子
+    movl $0x10, %edx
+    mov %dx, %ds
+    mov %dx, %es
+    # 设置fs段寄存器为LDT表中的第二个描述符（进程自己的数据段）
+    movl $0x17, %edx
+    mov %dx, %fs
+    # 调用[sys_call_table + %eax * 4]指向的系统调用函数
+    call sys_call_table(,%eax,4)
+    pushl %eax
+    # 如果当前任务的运行状态不是就绪态(state不等于0)或者时间片已用完(counter=0)，则去执行调度程序
+    movl current, %eax
+    cmpl $0, state(%eax)		# state
+    jne reschedule
+    cmpl $0, counter(%eax)		# counter
+    je reschedule
+
+# 从内核态返回到用户态的操作(硬件中断，系统调用)最后都要执行这个函数
 ret_from_sys_call:
     movl current, %eax  # task[0] cannot have signals
     cmpl task, %eax     # 直接引用task相当于引用task[0]
@@ -55,3 +103,8 @@ timer_interrupt:
     call do_timer           # 'do_timer(long CPL)' 执行任务切换，计时等工作
     addl $4, %esp
     jmp ret_from_sys_call
+
+.align 2
+sys_fork:
+	js 1f
+1:	ret
