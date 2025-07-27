@@ -3,6 +3,9 @@
 //
 #include <linux/kernel.h>
 
+#define invalidate() \
+__asm__("movl %%eax,%%cr3"::"a" (0))
+
 #define LOW_MEM 0x100000    // 物理内存的分界点（1MB 地址）。低于此地址的内存用于内核代码和静态数据，高于此地址的内存用于动态分配。
 #define PAGING_MEMORY (15*1024*1024)        // 可用于分页管理的物理内存大小（15MB）。这是内核可动态管理的最大内存（1MB~16MB）
 #define PAGING_PAGES (PAGING_MEMORY>>12)    // 物理页数量
@@ -63,6 +66,120 @@ void free_page(unsigned long addr) {
     }
     mem_map[addr] = 0;
     panic("trying to free free page");    // 试图释放空闲页面，触发内核panic错误
+}
+
+/*
+ * 释放页表和相关物理页。
+ *
+ * 释放从虚拟地址 from 开始、大小为 size 的连续内存区域，包括:
+ * 1. 物理内存页：解除映射并释放物理页
+ * 2. 页表结构：释放页表占用的物理页
+ * 3. 页目录项：清除页目录条目
+ */
+int free_page_tables(unsigned long from, unsigned long size)
+{
+    unsigned long *pg_table;
+    unsigned long *dir;
+    unsigned long nr;
+
+    if (from & 0x3fffff) {
+        panic("free_page_tables called with wrong alignment");
+    }
+
+    /* 禁止释放内核空间，from=0 对应内核页表 */
+    if (!from) {
+        panic("Trying to free up swapper memory space");
+    }
+
+    size = (size + 0x3fffff) >> 22;                 // 计算需释放的页目录项数量
+    dir = (unsigned long *) ((from >> 20) & 0xffc); // 获取起始页目录项指针
+    for (; size-- > 0; dir++) {
+        if (!(1 & *dir)) {  // 跳过未使用的页目录项
+            continue;
+        }
+
+        pg_table = (unsigned long *) (0xfffff000 & *dir);   // 获取页表物理地址
+        for (nr = 0; nr < 1024; nr++) {
+            if (1 & *pg_table) {                            // 检查页表项是否存在
+                free_page(0xfffff000 & *pg_table);      // 释放物理页
+            }
+            *pg_table = 0;
+            pg_table++;
+        }
+        free_page(0xfffff000 & *dir);   // 释放页表占用的物理页
+        *dir = 0;                           // 清空页目录项
+    }
+    invalidate();
+    return 0;
+}
+
+/*
+ * 复制页表，copy_page_tables 并不复制实际物理内存，只复制页表项，并将父子进程的页表项设为只读。
+ * 当任一进程尝试写入时触发缺页异常，再分配新物理页。
+ *
+ * 将源地址范围(from)的页表复制到目标地址(to)，覆盖指定大小(size)的内存区域
+ */
+int copy_page_tables(unsigned long from, unsigned long to, long size) {
+    unsigned long * from_page_table;    // 源（父进程）页表指针
+    unsigned long * to_page_table;      // 目标（新进程）页表指针
+    unsigned long this_page;            // 当前处理的页表项
+    unsigned long * from_dir;           // 源（父进程）页目录项指针
+    unsigned long * to_dir;             // 目标（新进程）页目录项指针
+    unsigned long nr;                   // 页表项数量
+
+    /* 要求源地址和目标地址按 4MB 对齐 */
+    if ((from & 0x3fffff) || (to & 0x3fffff)) {
+        panic("copy_page_tables called with wrong alignment");
+    }
+
+    /*
+     * 计算页目录表的起始页目录项地址。
+     * 对应的目录项号 = from >> 22，因为每项占4字节，因此实际的目录项指针 = 目录项号 << 2，也即(from>>20)。
+     * 与上0xffc确保目录项指针范围有效（4字节对齐）
+     */
+    from_dir = (unsigned long *) ((from>>20) & 0xffc); /* _pg_dir = 0 */
+    to_dir = (unsigned long *) ((to>>20) & 0xffc);      // 新进程的页目录项（页目录表的地址）
+
+    /* 计算需复制的页目录项数量 */
+    size = ((unsigned) (size + 0x3fffff)) >> 22;
+    /* 遍历页目录项 */
+    for (; size-- > 0; from_dir++, to_dir++) {
+        /* 检查目标（新进程）页目录项是否已被占用，以及跳过未使用的源（父进程）页目录项 */
+        if (1 & *to_dir) {
+            panic("copy_page_tables: already exist");
+        }
+        if (!(1 & *from_dir)) {
+            continue;
+        }
+
+        from_page_table = (unsigned long *) (0xfffff000 & *from_dir);   // 获取源页目录表中目录项对应的页表的地址
+        if (!(to_page_table = (unsigned long *) get_free_page())) {     // 为目标页表分配物理页
+            return -1;    /* Out of memory, see freeing */
+        }
+        *to_dir = ((unsigned long) to_page_table) | 7;                  // 设置目标页目录项，页表物理地址 + 权限位（7=111b 表示用户可读写）
+
+        // 复制页表项
+        nr = (from == 0) ? 0xA0 : 1024;     // 内核空间复制160项(640KB)，用户空间复制1024项(4MB)
+        for (; nr-- > 0; from_page_table++, to_page_table++) {
+            this_page = *from_page_table;   // 获取源页表项
+            if (!(1 & this_page)) {         // 跳过未使用的页
+                continue;
+            }
+            this_page &= ~2;                // 清除写标志(R/W=0)，即设置为只读
+            *to_page_table = this_page;     // 复制页表项(只读)
+
+            // 更新内存引用计数
+            if (this_page > LOW_MEM) {          // LOW_MEM=1MB，仅跟踪1MB以上内存
+                *from_page_table = this_page;   // 更新源页表项为只读
+
+                this_page -= LOW_MEM;
+                this_page >>= 12;               // 计算物理页号
+                mem_map[this_page]++;           // 增加物理页引用计数
+            }
+        }
+    }
+    invalidate();   // 刷新TLB，确保新页表生效
+    return 0;
 }
 
 /*

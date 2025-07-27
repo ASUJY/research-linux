@@ -5,6 +5,8 @@
 #ifndef FS_H
 #define FS_H
 
+#include <sys/types.h>
+
 #define NR_OPEN 20
 
 #ifndef NULL
@@ -32,6 +34,14 @@ struct m_inode {
     unsigned char i_mount;
     unsigned char i_seek;
     unsigned char i_update;
+};
+
+struct file {
+    unsigned short f_mode;
+    unsigned short f_flags;
+    unsigned short f_count;
+    struct m_inode * f_inode;
+    off_t f_pos;
 };
 
 #endif //FS_H

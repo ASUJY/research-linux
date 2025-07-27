@@ -1,8 +1,13 @@
+#define __LIBRARY__
+
+#include <unistd.h>
+
+inline _syscall0(int,fork);
+
 #include <linux/kernel.h>
 #include <linux/tty.h>
 #include <linux/sched.h>
 #include <asm/system.h>
-#include <linux/mm.h>
 
 extern void mem_init(long start, long end);
 extern long rd_init(long mem_start, int length);
@@ -44,8 +49,6 @@ void main(void)		/* This really IS void, no error here. */
 #endif
 
     mem_init(main_memory_start, memory_end);
-
-
     trap_init();
     tty_init();
     sched_init();
@@ -53,4 +56,8 @@ void main(void)		/* This really IS void, no error here. */
 
     sti();
     move_to_user_mode();
+    int pid = fork();
+    if (pid > 0) {
+        char* str = "I am parent!";
+    }
 }
