@@ -2,13 +2,16 @@
 
 #include <unistd.h>
 
-inline _syscall0(int,fork);
+inline _syscall0(int,fork)
+//static inline _syscall1(int,setup,void *,BIOS)
 
 #include <linux/kernel.h>
 #include <linux/tty.h>
 #include <linux/sched.h>
 #include <asm/system.h>
 
+extern void init(void);
+extern void hd_init(void);
 extern void mem_init(long start, long end);
 extern long rd_init(long mem_start, int length);
 
@@ -52,12 +55,19 @@ void main(void)		/* This really IS void, no error here. */
     trap_init();
     tty_init();
     sched_init();
+    hd_init();
     printk("Hi OneOS!\n");
 
     sti();
     move_to_user_mode();
     int pid = fork();
-    if (pid > 0) {
-        char* str = "I am parent!";
+    if (!fork()) {		/* we count on this going ok */
+        init();
     }
+}
+
+void init(void) {
+    int pid;
+    int i;
+    //setup((void *) &drive_info);
 }

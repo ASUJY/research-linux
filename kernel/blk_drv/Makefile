@@ -1,6 +1,6 @@
-OBJS := ramdisk.o
+OBJS := ramdisk.o hd.o ll_rw_blk.o
 BLK_DRV_BUILD_DIR := $(BUILD)/kernel/blk_drv
-CFLAGS := $(CFLAGS) -I./
+CFLAGS := $(CFLAGS) -I./ -I../../include
 
 .c.s:
 	@$(CC) $(CFLAGS) $(DEBUG) -S -o $*.s $<
