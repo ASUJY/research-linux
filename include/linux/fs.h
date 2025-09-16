@@ -10,7 +10,7 @@
 #define NR_OPEN 20
 
 #ifndef NULL
-#define NULL ((void *) 0)
+#define NULL ((void *)0)
 #endif
 
 struct m_inode {
@@ -22,7 +22,7 @@ struct m_inode {
     unsigned char i_nlinks;
     unsigned short i_zone[9];
     /* these are in memory also */
-    struct task_struct * i_wait;
+    struct task_struct *i_wait;
     unsigned long i_atime;
     unsigned long i_ctime;
     unsigned short i_dev;
@@ -40,7 +40,7 @@ struct file {
     unsigned short f_mode;
     unsigned short f_flags;
     unsigned short f_count;
-    struct m_inode * f_inode;
+    struct m_inode *f_inode;
     off_t f_pos;
 };
 

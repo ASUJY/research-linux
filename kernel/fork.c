@@ -85,8 +85,8 @@ int copy_process(int nr,long ebp,long edi,long esi,long gs,long none,
     return -EAGAIN;
   }
   task[nr] = p;      // 新进程的PCB放到 进程管理结构task[]中进行管理
-
-  *p = *current;	    /* NOTE! this doesn't copy the supervisor stack */
+  memcpy(p, current, sizeof(struct task_struct));
+  //*p = *current;	    /* NOTE! this doesn't copy the supervisor stack */
   /* 初始化独属于新进程自己的数据 */
   p->state       = TASK_UNINTERRUPTIBLE;
   p->pid         = last_pid;

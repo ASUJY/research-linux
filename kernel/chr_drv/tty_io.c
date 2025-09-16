@@ -142,7 +142,7 @@ void copy_to_cooked(struct tty_struct * tty) {
  * 把用户缓冲区中的字符写入tty的写队列中
  * */
 int tty_write(unsigned channel, char * buf, int nr) {
-    static cr_flag = 0; // 回车标志
+    static int cr_flag = 0; // 回车标志
     struct tty_struct *tty;
     char c;
     char *b = buf;
@@ -154,6 +154,7 @@ int tty_write(unsigned channel, char * buf, int nr) {
     }
     tty = channel + tty_table;
     while (nr > 0) {
+        //sleep_if_full(&tty->write_q);
         /* 当要写的字节数>0并且tty的写队列不满时，循环处理字符 */
         while (nr > 0 && !FULL(tty->write_q)) {
             c = get_fs_byte(b);

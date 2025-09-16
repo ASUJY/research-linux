@@ -1,8 +1,21 @@
 //
 // Created by asujy on 2025/7/2.
 //
+#include <signal.h>
+
 #include <linux/kernel.h>
 
+volatile void do_exit(long code);
+
+/*
+ * 内存不足处理函数：打印消息，终止当前进程并发送SIGSEGV信号
+ */
+static inline volatile void oom(void) {
+    printk("out of memory\n\r");
+    do_exit(SIGSEGV);
+}
+
+// 刷新TLB，确保新页表生效
 #define invalidate() \
 __asm__("movl %%eax,%%cr3"::"a" (0))
 
@@ -12,7 +25,15 @@ __asm__("movl %%eax,%%cr3"::"a" (0))
 #define MAP_NR(addr) (((addr)-LOW_MEM)>>12)    // 计算物理地址 addr 对应的物理页号索引（在 mem_map 数组中的位置）
 #define USED 100    // 表示页面已被占用（不可分配）
 
+/*  判断给定地址addr是否位于当前进程的代码段中 */
+#define CODE_SPACE(addr) ((((addr)+4095)&~4095) < \
+current->start_code + current->end_code)
+
 static long HIGH_MEMORY = 0;    // 系统实际可用的物理内存结束位置
+
+/* 复制1页内存页（使用汇编优化） */
+#define copy_page(from,to) \
+__asm__("cld ; rep ; movsl"::"S" (from),"D" (to),"c" (1024):)
 
 /*
 * 物理页管理数组，每个元素代表一个4KB的物理页
@@ -180,6 +201,60 @@ int copy_page_tables(unsigned long from, unsigned long to, long size) {
     }
     invalidate();   // 刷新TLB，确保新页表生效
     return 0;
+}
+
+/*
+ *  取消写保护页的函数，用于页异常中断过程中写保护异常的处理（写时复制核心实现）
+ */
+void un_wp_page(unsigned long* table_entry) {
+    unsigned long old_page;     // 原物理页地址
+    unsigned long new_page;     // 新物理页地址
+
+    // 从页表项中提取物理页地址（清除低12位标志位）
+    old_page = 0xfffff000 & *table_entry;
+
+    // 如果原页面在低端内存之上且引用计数为1（只有当前进程使用）
+    if (old_page >= LOW_MEM && mem_map[MAP_NR(old_page)] == 1) {
+        *table_entry |= 2;  // 直接设置页表项为可写（设置R/W位）
+        invalidate();
+        return;
+    }
+
+    // 申请新的空闲页，失败则执行OOM
+    if (!(new_page = get_free_page())) {
+        oom();
+    }
+
+    // 如果原页面大于内存低端，意味着页面是共享的，则减少原页面的引用计数
+    if (old_page >= LOW_MEM) {
+        mem_map[MAP_NR(old_page)]--;
+    }
+
+    // 设置新页表项：新页面地址 + 权限标志（7=111b表示用户可读写、存在）
+    *table_entry = new_page | 7;
+    invalidate();
+
+    // 复制原页面内容到新页面
+    copy_page(old_page, new_page);
+}
+
+/*
+ * 当用户试图往一个共享页面上写时，这个函数处理已存在的内存页面（写时复制）
+ * 通过将页面复制到一个新地址上并递减原页面的共享页面计数值来实现
+ */
+void do_wp_page(unsigned long error_code, unsigned long address) {
+#if 0
+    if (CODE_SPACE(address)) {
+        do_exit(SIGSEGV);
+    }
+#endif
+    un_wp_page((unsigned long *)
+                (((address>>10) & 0xffc) + (0xfffff000 &
+                *((unsigned long *) ((address>>20) &0xffc)))));
+}
+
+void do_no_page(unsigned long error_code, unsigned long address) {
+    printk("do_no_page has no content!!!");
 }
 
 /*

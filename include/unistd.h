@@ -8,16 +8,17 @@
 #ifdef __LIBRARY__
 
 #define __NR_fork	0
+#define __NR_pause	1
 
 #define _syscall0(type,name) \
 type name(void) \
 { \
 long __res; \
 __asm__ volatile ("int $0x80" \
-: "=a" (__res) \
-: "0" (__NR_##name)); \
+    : "=a" (__res) \
+    : "0" (__NR_##name)); \
 if (__res >= 0) \
-return (type) __res; \
+    return (type) __res; \
 errno = -__res; \
 return -1; \
 }
@@ -26,6 +27,7 @@ return -1; \
 
 extern int errno;
 
-int fork(void);
+static int fork(void);
+static int pause(void);
 
 #endif //UNISTD_H

@@ -2,8 +2,10 @@
 
 #include <unistd.h>
 
-inline _syscall0(int,fork)
-//static inline _syscall1(int,setup,void *,BIOS)
+static inline fork(void) __attribute__((always_inline));
+static inline pause(void) __attribute__((always_inline));
+static inline _syscall0(int,fork)
+static inline _syscall0(int,pause)
 
 #include <linux/kernel.h>
 #include <linux/tty.h>
@@ -60,14 +62,19 @@ void main(void)		/* This really IS void, no error here. */
 
     sti();
     move_to_user_mode();
-    int pid = fork();
+    //int pid = fork();
     if (!fork()) {		/* we count on this going ok */
         init();
+    }
+    for(;;) {
+        pause();
     }
 }
 
 void init(void) {
     int pid;
     int i;
-    //setup((void *) &drive_info);
+    for (i = 0; i < 10; i++) {
+        int a = a + i;
+    }
 }

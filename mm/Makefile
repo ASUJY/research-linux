@@ -1,10 +1,10 @@
-OBJS := memory.o
+OBJS := memory.o page.o
 MM_BUILD_DIR := $(BUILD)/mm
 CFLAGS := $(CFLAGS) -I../include/
 .c.s:
 	@$(CC) $(CFLAGS) -S -o $*.s $<
 .s.o:
-	@$(AS) -o $*.o $<
+	@$(AS) $(ASFLAGS) -o $*.o $<
 .c.o:
 	@$(CC) $(CFLAGS) $(DEBUG) -c -o $*.o $<
 

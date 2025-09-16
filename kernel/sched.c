@@ -2,11 +2,12 @@
 // Created by asujy on 2025/6/13.
 //
 
+#include <asm/io.h>
+#include <asm/system.h>
+#include <kernel.h>
+#include <linux/head.h>
 #include <linux/sched.h>
 #include <linux/sys.h>
-#include <linux/head.h>
-#include <asm/system.h>
-#include <asm/io.h>
 
 void show_stat(void)
 {
@@ -91,6 +92,13 @@ void schedule(void) {
     }
 
     switch_to(next);    // 切换到任务号为next的任务，并执行这个任务
+}
+
+int sys_pause(void)
+{
+    current->state = TASK_INTERRUPTIBLE;
+    schedule();
+    return 0;
 }
 
 #define TIME_REQUESTS 64

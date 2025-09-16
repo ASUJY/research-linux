@@ -28,6 +28,7 @@
 int do_exit(long code);
 
 void divide_error(void);
+void page_fault(void);
 void reserved(void);
 
 static void die(char* str, long esp_ptr, long nr) {
@@ -67,6 +68,7 @@ void trap_init(void) {
     int i;
 
     set_trap_gate(0, &divide_error);
+    set_trap_gate(14, &page_fault);
     for (i = 17; i < 48; i++) {
         set_trap_gate(i, &reserved);
     }

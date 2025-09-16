@@ -58,6 +58,8 @@ extern struct tty_struct tty_table[];
 void con_init(void);
 void tty_init(void);
 
+int tty_write(unsigned c, char * buf, int n);
+
 void con_write(struct tty_struct * tty);
 
 void copy_to_cooked(struct tty_struct * tty);
