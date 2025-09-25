@@ -101,6 +101,31 @@ int sys_pause(void)
     return 0;
 }
 
+void interruptible_sleep_on(struct task_struct **p)
+{
+    struct task_struct *tmp;
+
+    if (!p) {
+        return;
+    }
+    if (current == &(init_task.task)) {
+        panic("task[0] trying to sleep");
+    }
+    tmp = *p;
+    *p = current;
+repeat:
+    current->state = TASK_INTERRUPTIBLE;
+    schedule();
+    if (*p && *p != current) {
+        (**p).state = 0;
+        goto repeat;
+    }
+    *p = NULL;
+    if (tmp) {
+        tmp->state = 0;
+    }
+}
+
 #define TIME_REQUESTS 64
 
 static struct timer_list {

@@ -159,6 +159,8 @@ extern struct task_struct *last_task_used_math;
 extern struct task_struct *current;
 extern long volatile jiffies;
 
+extern void interruptible_sleep_on(struct task_struct ** p);
+
 #define FIRST_TSS_ENTRY 4
 #define FIRST_LDT_ENTRY (FIRST_TSS_ENTRY+1)
 // 计算在GDT表中第n个任务(进程)的TSS描述符的索引号

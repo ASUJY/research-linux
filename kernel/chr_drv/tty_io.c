@@ -2,6 +2,7 @@
 
 #include <linux/tty.h>
 #include <asm/segment.h>
+#include <asm/system.h>
 
 #define _L_FLAG(tty,f)	((tty)->termios.c_lflag & f)
 #define _I_FLAG(tty,f)	((tty)->termios.c_iflag & f)
@@ -51,6 +52,18 @@ struct tty_queue * table_list[]={
 
 void tty_init(void) {
     con_init();
+}
+
+static void sleep_if_full(struct tty_queue * queue)
+{
+	if (!FULL(*queue)) {
+		return;
+	}
+	cli();
+	while (/*!current->signal && */LEFT(*queue) < 128) {
+		interruptible_sleep_on(&queue->proc_list);
+	}
+	sti();
 }
 
 void copy_to_cooked(struct tty_struct * tty) {
@@ -154,7 +167,11 @@ int tty_write(unsigned channel, char * buf, int nr) {
     }
     tty = channel + tty_table;
     while (nr > 0) {
-        //sleep_if_full(&tty->write_q);
+        sleep_if_full(&tty->write_q);
+        /*
+            if (current->signal)
+			    break;
+        */
         /* 当要写的字节数>0并且tty的写队列不满时，循环处理字符 */
         while (nr > 0 && !FULL(tty->write_q)) {
             c = get_fs_byte(b);
@@ -178,6 +195,9 @@ int tty_write(unsigned channel, char * buf, int nr) {
         }
         /* 若全部字节写完，或者写队列已满，则调用对应的tty的写函数来将字符打印到屏幕中 */
         tty->write(tty);
+        if (nr > 0) {
+			schedule();
+        }
     }
     return (b - buf);
 }
