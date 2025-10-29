@@ -6,6 +6,7 @@ static inline fork(void) __attribute__((always_inline));
 static inline pause(void) __attribute__((always_inline));
 static inline _syscall0(int,fork)
 static inline _syscall0(int,pause)
+static inline _syscall1(int,setup,void *,BIOS)
 
 #include <linux/kernel.h>
 #include <linux/tty.h>
@@ -13,6 +14,7 @@ static inline _syscall0(int,pause)
 #include <asm/system.h>
 
 extern void init(void);
+extern void blk_dev_init(void);
 extern void hd_init(void);
 extern void mem_init(long start, long end);
 extern long rd_init(long mem_start, int length);
@@ -55,8 +57,10 @@ void main(void)		/* This really IS void, no error here. */
 
     mem_init(main_memory_start, memory_end);
     trap_init();
+    blk_dev_init();
     tty_init();
     sched_init();
+    buffer_init(buffer_memory_end);
     hd_init();
     printk("Hi OneOS!\n");
 
@@ -72,9 +76,5 @@ void main(void)		/* This really IS void, no error here. */
 }
 
 void init(void) {
-    int pid;
-    int i;
-    for (i = 0; i < 10; i++) {
-        int a = a + i;
-    }
+    setup((void *) &drive_info);
 }

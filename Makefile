@@ -21,7 +21,7 @@ ${BUILD}/system.bin: ${BUILD}/kernel.bin
 	@nm ${BUILD}/kernel.bin | sort > ${BUILD}/system.map
 
 ${BUILD}/kernel.bin: ${BUILD}/boot/head.o $(BUILD)/init/main.o $(BUILD)/kernel/kernel.o $(BUILD)/kernel/chr_drv/chr_drv.a\
-	$(BUILD)/lib/lib.a $(BUILD)/kernel/blk_drv/blk_drv.a $(BUILD)/mm/mm.o
+	$(BUILD)/lib/lib.a $(BUILD)/kernel/blk_drv/blk_drv.a $(BUILD)/mm/mm.o $(BUILD)/fs/fs.o
 	@ld $(LDFLAGS) --start-group $^ --end-group -o $@ -Ttext 0x00000000
 
 $(BUILD)/init/main.o: init/main.c
@@ -45,6 +45,8 @@ $(BUILD)/lib/lib.a:
 $(BUILD)/mm/mm.o:
 	@$(MAKE) -C mm
 
+$(BUILD)/fs/fs.o:
+	@$(MAKE) -C fs
 
 clean:
 	@rm -rf ${BUILD} bx_enh_dbg.ini
@@ -55,8 +57,9 @@ clean:
 	@$(MAKE) -C kernel/blk_drv clean
 	@$(MAKE) -C lib clean
 	@$(MAKE) -C mm clean
+	@$(MAKE) -C fs clean
 
-bochs:
+bochs: clean all
 	bochs -q -f bochsrc
 
 qemug: clean all

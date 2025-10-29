@@ -145,6 +145,7 @@ void copy_to_cooked(struct tty_struct * tty) {
         }
         PUTCH(c, tty->secondary);
     }
+    wake_up(&tty->secondary.proc_list);
 }
 
 /**

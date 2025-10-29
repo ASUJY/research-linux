@@ -56,6 +56,22 @@ void schedule(void) {
     int c;
     struct task_struct **p;
 
+/*
+    for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
+        if (*p) {
+            if ((*p)->alarm && (*p)->alarm < jiffies) {
+                (*p)->signal |= (1<<(SIGALRM-1));
+                (*p)->alarm = 0;
+            }
+            if (((*p)->signal & ~(_BLOCKABLE & (*p)->blocked)) &&
+            (*p)->state==TASK_INTERRUPTIBLE) {
+                (*p)->state=TASK_RUNNING;
+            }
+        }
+    }
+
+ */
+
     /* 以下是调度程序的主要部分 */
     while (1) {
         c = -1;
@@ -99,6 +115,44 @@ int sys_pause(void)
     current->state = TASK_INTERRUPTIBLE;
     schedule();
     return 0;
+}
+
+/*
+ * 实现进程睡眠等待，将当前进程设置为不可中断的等待状态，并让睡眠队列头 的指针 指向当前任务。
+ * 这个函数提供了进程与中断处理程序之间的同步机制。
+ * p: 指向等待队列头部的指针，用于管理等待特定资源的进程链表
+ */
+void sleep_on(struct task_struct **p) {
+    struct task_struct *tmp;    // 用于保存前一个等待进程，实现链式唤醒
+
+    if (!p) {
+        return;
+    }
+    // 禁止进程0（idle进程）睡眠，否则触发内核恐慌（panic），因为idle进程是系统唯一不可休眠的进程。
+    if (current == &(init_task.task)) {
+        panic("task[0] trying to sleep");
+    }
+
+    tmp = *p;       // tmp保存当前等待队列头部（用于后续唤醒）
+    *p = current;   // 将当前进程（current）插入队列头部
+    current->state = TASK_UNINTERRUPTIBLE;  // 将当前进程设置为不可中断的等待状态
+    schedule();     // 调用调度器切换进程，当前进程进入睡眠，直到被唤醒后重新运行
+
+    if (tmp) {
+        tmp->state=0;   // 当前进程被唤醒后，将之前保存的前一个队列头部进程（tmp）状态设为0（即TASK_RUNNING），尝试唤醒它。
+    }
+}
+
+/*
+ * 唤醒等待队列上的睡眠进程
+ * 实现了简单的进程状态转换和队列管理
+ */
+void wake_up(struct task_struct **p)
+{
+    if (p && *p) {
+        (**p).state=0;    // 将进程状态设置为0，即TASK_RUNNING，让进程p可以被调度器选择运行
+        *p=NULL;          // 将等待队列头设置为NULL，表示队列已空
+    }
 }
 
 void interruptible_sleep_on(struct task_struct **p)

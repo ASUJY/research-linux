@@ -10,7 +10,7 @@
  * @param addr 内存地址
  * @return 字符
  */
-extern inline unsigned char get_fs_byte(const char * addr)
+static inline unsigned char get_fs_byte(const char * addr)
 {
     unsigned register char _v;
 

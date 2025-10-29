@@ -22,6 +22,7 @@ __asm__ ("movl %%esp,%%eax\n\t" \
 
 #define sti() __asm__ ("sti"::)
 #define cli() __asm__ ("cli"::)
+#define nop() __asm__ ("nop"::)
 
 // 设置描述符
 #define _set_gate(gate_addr,type,dpl,addr) \

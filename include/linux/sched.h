@@ -159,6 +159,8 @@ extern struct task_struct *last_task_used_math;
 extern struct task_struct *current;
 extern long volatile jiffies;
 
+extern void sleep_on(struct task_struct ** p);
+extern void wake_up(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);
 
 #define FIRST_TSS_ENTRY 4
