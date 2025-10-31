@@ -7,7 +7,7 @@
 #include <asm/system.h>
 
 extern int end;
-struct buffer_head * start_buffer = (struct buffer_head *) &end;
+struct buffer_head * start_buffer = (struct buffer_head *) &end;    // 全局缓冲区数组的起始地址
 struct buffer_head* hash_table[NR_HASH];
 static struct buffer_head * free_list = NULL;
 static struct task_struct * buffer_wait = NULL;
@@ -47,7 +47,7 @@ int sync_dev(int dev) {
         }
     }
 
-    //sync_inodes();    // 同步 inode 信息，将i节点数据写入高速缓冲区
+    sync_inodes();    // 同步 inode 信息，将i节点数据写入高速缓冲区
 
     // 重复第一遍的过程，确保在 sync_inodes() 过程中变脏的缓冲区也能被写回磁盘
     bh = start_buffer;
@@ -62,6 +62,49 @@ int sync_dev(int dev) {
     }
 
     return 0;
+}
+
+/*
+ * 让指定设备在高速缓冲区中的数据无效
+ */
+static void inline invalidate_buffers(int dev)
+{
+    int i;
+    struct buffer_head * bh;
+
+    bh = start_buffer;
+    for (i = 0; i < NR_BUFFERS; i++,bh++) {
+        if (bh->b_dev != dev) {
+            continue;
+        }
+        wait_on_buffer(bh);
+        if (bh->b_dev == dev) {
+            bh->b_uptodate = bh->b_dirt = 0;
+        }
+    }
+}
+
+/*
+ * 检查软盘是否已经被更换，主要处理可移动介质（如软盘）的更换情况。
+ */
+void check_disk_change(int dev) {
+    int i;
+
+    /* 是软盘设备吗？不是则退出 */
+    if (MAJOR(dev) != 2) {
+        return;
+    }
+    // 目前没有使用软盘，所以注释掉软盘部分代码
+    // if (!floppy_change(dev & 0x03)) {
+    //     return;
+    // }
+    for (i = 0; i < NR_SUPER; i++) {
+        if (super_block[i].s_dev == dev) {
+            put_super(super_block[i].s_dev);
+        }
+    }
+    invalidate_inodes(dev);
+    invalidate_buffers(dev);
 }
 
 // 计算hash值，访问hash_table中对应的链表头
@@ -222,7 +265,8 @@ repeat:
 }
 
 /*
- * 释放缓冲区的引用计数
+ * 释放缓冲区
+ * 递减引用计数
  */
 void brelse(struct buffer_head * buf)
 {

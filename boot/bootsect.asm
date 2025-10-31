@@ -6,6 +6,8 @@ SYSSEG      equ 0x1000      ;将system模块加载到0x10000处
 SYSSIZE     equ 0x5000      ;编译链接后system模块的大小
 ENDSEG      equ SYSSEG + SYSSIZE
 
+ROOT_DEV equ 0x306  ;0x306 第2块硬盘的第一个分区
+
 [SECTION .text]
 [BITS 16]
 start:
@@ -156,5 +158,7 @@ msg1:
     db "Loading system ..."
     db 13, 10, 13, 10
 
-times 510 - ($ - $$) db 0
+times 508 - ($ - $$) db 0
+root_dev:
+	dw ROOT_DEV
 dw 0xAA55   ;MBR扇区标识

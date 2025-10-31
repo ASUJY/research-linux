@@ -1,5 +1,6 @@
 #include <ctype.h>
 
+#include <linux/sched.h>
 #include <linux/tty.h>
 #include <asm/segment.h>
 #include <asm/system.h>
@@ -54,6 +55,15 @@ void tty_init(void) {
     con_init();
 }
 
+static void sleep_if_empty(struct tty_queue * queue)
+{
+    cli();
+    while (!current->signal && EMPTY(*queue)) {
+        interruptible_sleep_on(&queue->proc_list);
+    }
+    sti();
+}
+
 static void sleep_if_full(struct tty_queue * queue)
 {
 	if (!FULL(*queue)) {
@@ -64,6 +74,11 @@ static void sleep_if_full(struct tty_queue * queue)
 		interruptible_sleep_on(&queue->proc_list);
 	}
 	sti();
+}
+
+void wait_for_keypress(void)
+{
+    sleep_if_empty(&tty_table[0].secondary);
 }
 
 void copy_to_cooked(struct tty_struct * tty) {

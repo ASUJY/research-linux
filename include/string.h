@@ -27,4 +27,14 @@ extern inline void * memcpy(void * dest, const void * src, int n)
   return dest;
 }
 
+extern inline void * memset(void * s, char c, int count)
+{
+  __asm__("cld\n\t"
+          "rep\n\t"
+          "stosb"
+          ::"a" (c),"D" (s),"c" (count)
+          :);
+  return s;
+}
+
 #endif //RESEARCH_LINUX_STRING_H

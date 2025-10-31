@@ -159,6 +159,9 @@ extern struct task_struct *last_task_used_math;
 extern struct task_struct *current;
 extern long volatile jiffies;
 
+extern long startup_time;
+#define CURRENT_TIME (startup_time+jiffies/HZ)
+
 extern void sleep_on(struct task_struct ** p);
 extern void wake_up(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);

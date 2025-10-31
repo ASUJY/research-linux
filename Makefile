@@ -67,10 +67,12 @@ qemug: clean all
 		-m 32M \
 		-boot c \
 		-hda ./build/hd.img \
+		-hdb ./hdc-0.11.img \
 		-s -S
 
 qemu: clean all
 	qemu-system-i386 \
 	-m 32M \
 	-boot c \
-	-hda ./build/hd.img
+	-hda ./build/hd.img \
+	-hdb ./hdc-0.11.img

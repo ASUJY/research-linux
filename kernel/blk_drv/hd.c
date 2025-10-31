@@ -27,12 +27,13 @@ static void recal_intr(void);
 static int recalibrate = 1; // 硬盘重新校准标志
 static int reset = 1;       // 硬盘控制器重置标志
 
+/* 硬盘的基本信息 */
 struct hd_i_struct {
-    int head;
-    int sect;
-    int cyl;
-    int wpcom;
-    int lzone;
+    int head;   // 磁头数
+    int sect;   // 每磁道扇区数
+    int cyl;    // 柱面数
+    int wpcom;  // 写前预补偿柱面号
+    int lzone;  // 磁头着陆区柱面号
     int ctl;    // 控制字节
 };
 #ifdef HD_TYPE
@@ -44,7 +45,7 @@ struct hd_i_struct hd_info[] = { {0,0,0,0,0,0},{0,0,0,0,0,0} };
 static int NR_HD = 0;
 #endif
 
-
+/* 硬盘的分区信息 */
 static struct hd_struct {
     long start_sect;
     long nr_sects;
@@ -58,7 +59,7 @@ __asm__("cld;rep;outsw"::"d" (port),"S" (buf),"c" (nr))
 
 extern void hd_interrupt(void);
 
-/* This may be used only once, enforced by 'static int callable' */
+/* 负责读取硬盘参数信息、读取分区表信息并初始化硬盘分区结构hd，加载根文件系统 */
 int sys_setup(void * BIOS)
 {
     static int callable = 1;
@@ -73,7 +74,9 @@ int sys_setup(void * BIOS)
     }
     callable = 0;
 
+    /* 如果没有预定义硬盘参数，就从0x90080处读入 */
 #ifndef HD_TYPE
+    /* 从 BIOS 数据区读取两个硬盘的参数 */
     for (drive = 0; drive < 2; drive++) {
         hd_info[drive].cyl = *(unsigned short *) BIOS;
         hd_info[drive].head = *(unsigned char *) (2+BIOS);
@@ -83,18 +86,21 @@ int sys_setup(void * BIOS)
         hd_info[drive].sect = *(unsigned char *) (14+BIOS);
         BIOS += 16;
     }
-    if (hd_info[1].cyl) {
-        NR_HD = 2;
+    if (hd_info[1].cyl) {   // 根据第二个硬盘的柱面数判断是否存在第二个硬盘
+        NR_HD = 2;          // 设置硬盘数量
     } else {
         NR_HD = 1;
     }
 #endif
+    /* 初始化主分区表（每个硬盘有5个分区项；0: 整个磁盘, 1-4: 主分区），
+     * 设置硬盘的起始扇区以及总扇区数
+     */
     for (i = 0; i < NR_HD; i++) {
         hd[i*5].start_sect = 0;
-        hd[i*5].nr_sects = hd_info[i].head*
-                        hd_info[i].sect*hd_info[i].cyl;
+        hd[i*5].nr_sects = hd_info[i].head * hd_info[i].sect * hd_info[i].cyl;
     }
 
+    /* 根据 CMOS 信息重新设置硬盘数量 */
     if ((cmos_disks = CMOS_READ(0x12)) & 0xf0) {
         if (cmos_disks & 0x0f) {
             NR_HD = 2;
@@ -111,14 +117,29 @@ int sys_setup(void * BIOS)
     }
 
     for (drive = 0; drive < NR_HD; drive++) {
+        /* 对每个存在的硬盘，读取其主引导记录（MBR）；0x300是硬盘的主设备号*/
         if (!(bh = bread(0x300 + drive * 5, 0))) {
-            printk("Unable to read partition table of drive %d\n\r",
-                    drive);
+            printk("Unable to read partition table of drive %d\n\r", drive);
             panic("");
         }
-        // list to do
+        /* 检查 MBR 结束标志 0x55A */
+        if (bh->b_data[510] != 0x55 || (unsigned char) bh->b_data[511] != 0xAA) {
+            printk("Bad partition table on drive %d\n\r", drive);
+            panic("");
+        }
+        /* 解析分区表，分区表位于 MBR 偏移 0x1BE 处，遍历4个主分区表项 */
+        p = 0x1BE + (void*)bh->b_data;
+        for (i = 1; i < 5; i++, p++) {
+            hd[i + 5 * drive].start_sect = p->start_sect;
+            hd[i + 5 * drive].nr_sects = p->nr_sects;
+        }
+        brelse(bh);
     }
-
+    if (NR_HD) {
+        printk("Partition table%s ok.\n\r", (NR_HD > 1) ? "s" : "");
+    }
+    // rd_load();
+    mount_root();   // 挂载根文件系统
     return 0;
 }
 
