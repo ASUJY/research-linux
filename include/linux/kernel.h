@@ -16,4 +16,7 @@ void kfree_s(void * obj, int size);
 
 #define kfree(x) kfree_s((x), 0)
 
+/* 检查当前进程的有效用户ID是否为0（root用户）*/
+#define suser() (current->euid == 0)
+
 #endif //RESEARCH_LINUX_KERNEL_H

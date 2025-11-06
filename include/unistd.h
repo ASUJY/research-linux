@@ -9,7 +9,8 @@
 
 #define __NR_setup	0
 #define __NR_fork	1
-#define __NR_pause	2
+#define __NR_open	2
+#define __NR_pause	3
 
 #define _syscall0(type,name) \
 type name(void) \
@@ -42,6 +43,7 @@ return -1; \
 extern int errno;
 
 static int fork(void);
+int open(const char * filename, int flag, ...);
 static int pause(void);
 
 #endif //UNISTD_H

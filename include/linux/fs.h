@@ -30,7 +30,8 @@ void buffer_init(long buffer_end);
 #define MAJOR(a) (((unsigned)(a))>>8)
 #define MINOR(a) ((a)&0xff)
 
-#define ROOT_INO 1
+#define NAME_LEN 14
+#define ROOT_INO 1  // 文件系统根inode所在位置
 
 #define I_MAP_SLOTS 8
 #define Z_MAP_SLOTS 8
@@ -48,6 +49,7 @@ void buffer_init(long buffer_end);
 #endif
 
 #define INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct d_inode)))
+#define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct dir_entry)))
 
 /*
  * 缓冲区头（buffer_head）是内核用于管理磁盘块缓存的核心数据结构，
@@ -154,12 +156,23 @@ struct d_super_block {
   unsigned short s_magic;          // 文件系统魔数，标识文件系统类型
 };
 
+struct dir_entry {
+ unsigned short inode;  // 关联的inode编号
+ char name[NAME_LEN];   // 文件名
+};
+
+extern struct m_inode inode_table[NR_INODE];
 extern struct file file_table[NR_FILE];
 extern struct super_block super_block[NR_SUPER];
+extern struct buffer_head * start_buffer;
 
 extern void check_disk_change(int dev);
 extern void truncate(struct m_inode * inode);
 extern void sync_inodes(void);
+extern int bmap(struct m_inode * inode,int block);
+extern int create_block(struct m_inode * inode,int block);
+extern int open_namei(const char * pathname, int flag, int mode,
+ struct m_inode ** res_inode);
 extern void iput(struct m_inode * inode);
 extern struct m_inode * iget(int dev,int nr);
 extern struct m_inode * get_empty_inode(void);
@@ -168,7 +181,9 @@ extern struct buffer_head * getblk(int dev, int block);
 extern void ll_rw_block(int rw, struct buffer_head * bh);
 extern void brelse(struct buffer_head * buf);
 extern struct buffer_head * bread(int dev,int block);
+extern int new_block(int dev);
 extern void free_block(int dev, int block);
+extern struct m_inode * new_inode(int dev);
 extern void free_inode(struct m_inode * inode);
 extern int sync_dev(int dev);
 extern struct super_block * get_super(int dev);

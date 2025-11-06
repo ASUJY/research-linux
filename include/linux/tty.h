@@ -39,6 +39,7 @@ struct tty_queue {
 
 struct tty_struct {
     struct termios termios;
+    int pgrp;
     int stopped;
     void (*write)(struct tty_struct * tty);
     struct tty_queue read_q;

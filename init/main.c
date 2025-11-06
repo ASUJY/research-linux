@@ -13,6 +13,8 @@ static inline _syscall1(int,setup,void *,BIOS)
 #include <linux/sched.h>
 #include <asm/system.h>
 
+#include <fcntl.h>
+
 extern void init(void);
 extern void blk_dev_init(void);
 extern void hd_init(void);
@@ -79,4 +81,5 @@ void main(void)		/* This really IS void, no error here. */
 
 void init(void) {
     setup((void *) &drive_info);
+    (void) open("/dev/tty0", O_RDWR, 0);
 }

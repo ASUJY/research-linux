@@ -33,6 +33,7 @@ struct tty_struct tty_table[1] = {
          ISIG | ICANON | ECHO | ECHOCTL | ECHOKE,/* 本地模式标志 */
          0,                    /* 控制台 termio */
          INIT_C_CC},        /* 控制字符数组 */
+        0,
         0,                    /* 初始停止标志 */
         con_write,          /* tty写函数 */
         {0, 0, 0, 0, {0}},        /* console read-queue */
