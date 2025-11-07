@@ -13,8 +13,9 @@
 #define __NR_fork	1
 #define __NR_write	2
 #define __NR_open	3
-#define __NR_pause	4
-#define __NR_dup	5
+#define __NR_close	4
+#define __NR_pause	5
+#define __NR_dup	6
 
 #define _syscall0(type,name) \
 type name(void) \
@@ -59,6 +60,7 @@ return -1; \
 
 extern int errno;
 
+int close(int fildes);
 int dup(int fildes);
 static int fork(void);
 int open(const char * filename, int flag, ...);
