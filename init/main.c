@@ -106,5 +106,9 @@ void init(void) {
     printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
     if (!(pid = fork())) {
         close(0);
+        if (open("/etc/rc", O_RDONLY, 0)) {
+            _exit(1);
+        }
+
     }
 }

@@ -7,6 +7,7 @@
 
 /* open/fcntl - NOCTTY, NDELAY isn't implemented yet */
 #define O_ACCMODE	00003
+#define O_RDONLY	   00
 #define O_WRONLY	   01
 #define O_RDWR		   02
 #define O_CREAT		00100	/* not fcntl */

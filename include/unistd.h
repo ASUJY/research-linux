@@ -10,12 +10,13 @@
 #ifdef __LIBRARY__
 
 #define __NR_setup	0
-#define __NR_fork	1
-#define __NR_write	2
-#define __NR_open	3
-#define __NR_close	4
-#define __NR_pause	5
-#define __NR_dup	6
+#define __NR_exit	1
+#define __NR_fork	2
+#define __NR_write	3
+#define __NR_open	4
+#define __NR_close	5
+#define __NR_pause	6
+#define __NR_dup	7
 
 #define _syscall0(type,name) \
 type name(void) \
@@ -62,6 +63,7 @@ extern int errno;
 
 int close(int fildes);
 int dup(int fildes);
+volatile void _exit(int status);
 static int fork(void);
 int open(const char * filename, int flag, ...);
 static int pause(void);
