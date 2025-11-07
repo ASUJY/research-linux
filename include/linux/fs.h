@@ -42,6 +42,7 @@ void buffer_init(long buffer_end);
 #define NR_FILE 64
 #define NR_SUPER 8
 #define NR_HASH 307
+#define NR_BUFFERS nr_buffers
 #define BLOCK_SIZE 1024
 
 #ifndef NULL
@@ -165,6 +166,7 @@ extern struct m_inode inode_table[NR_INODE];
 extern struct file file_table[NR_FILE];
 extern struct super_block super_block[NR_SUPER];
 extern struct buffer_head * start_buffer;
+extern int nr_buffers;
 
 extern void check_disk_change(int dev);
 extern void truncate(struct m_inode * inode);

@@ -13,8 +13,14 @@ static inline _syscall1(int,setup,void *,BIOS)
 #include <linux/sched.h>
 #include <asm/system.h>
 
+#include <stdarg.h>
 #include <fcntl.h>
 
+#include <linux/fs.h>
+
+static char printbuf[1024];
+
+extern int vsprintf();
 extern void init(void);
 extern void blk_dev_init(void);
 extern void hd_init(void);
@@ -79,7 +85,22 @@ void main(void)		/* This really IS void, no error here. */
     }
 }
 
+static int printf(const char *fmt, ...) {
+    va_list args;
+    int i;
+
+    va_start(args, fmt);
+    write(1, printbuf, i = vsprintf(printbuf, fmt, args));
+    va_end(args);
+    return i;
+}
+
 void init(void) {
     setup((void *) &drive_info);
     (void) open("/dev/tty0", O_RDWR, 0);
+    (void) dup(0);
+    (void) dup(0);
+    printf("%d buffers = %d bytes buffer space\n\r",NR_BUFFERS,
+                NR_BUFFERS*BLOCK_SIZE);
+    printf("Free mem: %d bytes\n\r",memory_end-main_memory_start);
 }
