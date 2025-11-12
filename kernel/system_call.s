@@ -1,14 +1,18 @@
 
 # 堆栈中各个寄存器的偏移位置
+EIP		= 0x1C
 CS		= 0x20
+OLDSS		= 0x2C
 
 # task_struct中变量的偏移值
 state	= 0
 counter	= 4
+signal	= 12
+blocked = (33*16)
 
 nr_system_calls = 72    # 系统调用总数量
 
-.global system_call,sys_fork,timer_interrupt
+.global system_call,sys_fork,timer_interrupt,sys_execve
 .global hd_interrupt
 
 # 系统调用出错，设置错误码为-1
@@ -44,7 +48,7 @@ system_call:
     movl $0x17, %edx
     mov %dx, %fs
     # 调用[sys_call_table + %eax * 4]指向的系统调用函数
-    call sys_call_table(,%eax,4)
+    call *sys_call_table(,%eax,4)
     pushl %eax
     # 如果当前任务的运行状态不是就绪态(state不等于0)或者时间片已用完(counter=0)，则去执行调度程序
     movl current, %eax
@@ -60,6 +64,16 @@ ret_from_sys_call:
     je 3f
     #通过对原调用程序代码段选择子的检查来判断调用程序是否是内核任务（例如任务1）。如果是则直接
     #退出中断。否则对于普通进程则需进行信号量的处理。现在暂时不处理！
+    cmpw $0x0f,CS(%esp)		# was old code segment supervisor ?
+    jne 3f
+    cmpw $0x17,OLDSS(%esp)		# was stack segment = 0x17 ?
+    jne 3f
+    movl signal(%eax),%ebx
+    movl blocked(%eax),%ecx
+    notl %ecx
+    andl %ebx,%ecx
+    bsfl %ecx,%ecx
+    je 3f
 
     # 恢复上下文
 3:	popl %eax
@@ -104,6 +118,14 @@ timer_interrupt:
     call do_timer           # 'do_timer(long CPL)' 执行任务切换，计时等工作
     addl $4, %esp
     jmp ret_from_sys_call
+
+.align 2
+sys_execve:
+	lea EIP(%esp),%eax
+	pushl %eax
+	call do_execve
+	addl $4,%esp
+	ret
 
 .align 2
 sys_fork:

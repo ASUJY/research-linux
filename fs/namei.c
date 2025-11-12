@@ -369,6 +369,42 @@ static struct m_inode * dir_namei(const char * pathname,
     return dir;
 }
 
+struct m_inode * namei(const char * pathname)
+{
+    const char * basename;
+    int inr;
+    int dev;
+    int namelen;
+    struct m_inode * dir;
+    struct buffer_head * bh;
+    struct dir_entry * de;
+    /* 查找指定路径最后一层所在目录的inode，
+     * namelen和basename分别是路径中最后一个文件的长度和名称 */
+    if (!(dir = dir_namei(pathname,&namelen,&basename))) {
+        return NULL;
+    }
+    if (!namelen) {
+        /* special case: '/usr/' etc */
+        return dir;
+    }
+    /* 在文件路径中的最下层目录中查找文件(/usr/include/xx.h，在include目录中查找xx.h) */
+    bh = find_entry(&dir, basename, namelen, &de);
+    if (!bh) {
+        iput(dir);
+        return NULL;
+    }
+    inr = de->inode;          // 获取文件对应的inode编号
+    dev = dir->i_dev;
+    brelse(bh);
+    iput(dir);
+    dir = iget(dev, inr);   // 获取文件对应的inode
+    if (dir) {
+        dir->i_atime = CURRENT_TIME;
+        dir->i_dirt = 1;
+    }
+    return dir;
+}
+
 /*
  * open()专用的namei函数，实现了几乎完整的文件打开逻辑
  * 包括路径解析、权限检查、文件创建、截断处理等。

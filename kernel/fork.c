@@ -1,7 +1,10 @@
 //
 // Created by asujy on 2025/7/25.
 //
+
+#include <string.h>
 #include <errno.h>
+
 #include <linux/sched.h>
 #include <asm/system.h>
 

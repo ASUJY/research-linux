@@ -10,6 +10,7 @@ extern int errno;
 #define EPERM		 1
 #define ENOENT		 2
 #define EIO		 5
+#define ENOEXEC		 8
 #define EBADF		 9
 #define EAGAIN		11    // 资源暂时不可用
 #define ENOMEM		12    // 内存不足

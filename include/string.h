@@ -5,7 +5,40 @@
 #ifndef RESEARCH_LINUX_STRING_H
 #define RESEARCH_LINUX_STRING_H
 
-extern inline int strlen(const char * s)
+static inline char * strncpy(char * dest,const char *src,int count)
+{
+  __asm__("cld\n"
+    "1:\tdecl %2\n\t"
+    "js 2f\n\t"
+    "lodsb\n\t"
+    "stosb\n\t"
+    "testb %%al,%%al\n\t"
+    "jne 1b\n\t"
+    "rep\n\t"
+    "stosb\n"
+    "2:"
+    ::"S" (src),"D" (dest),"c" (count):"ax");
+  return dest;
+}
+
+static inline char * strchr(const char * s,char c)
+{
+  register char * __res __asm__("ax");
+  __asm__("cld\n\t"
+    "movb %%al,%%ah\n"
+    "1:\tlodsb\n\t"
+    "cmpb %%ah,%%al\n\t"
+    "je 2f\n\t"
+    "testb %%al,%%al\n\t"
+    "jne 1b\n\t"
+    "movl $1,%1\n"
+    "2:\tmovl %1,%0\n\t"
+    "decl %0"
+    :"=a" (__res):"S" (s),"0" (c):);
+  return __res;
+}
+
+static inline int strlen(const char * s)
 {
     register int __res __asm__("cx");
     __asm__("cld\n\t"
@@ -17,7 +50,7 @@ extern inline int strlen(const char * s)
     return __res;
 }
 
-extern inline void * memcpy(void * dest, const void * src, int n)
+static inline void * memcpy(void * dest, const void * src, int n)
 {
   __asm__("cld\n\t"
           "rep\n\t"
@@ -27,7 +60,7 @@ extern inline void * memcpy(void * dest, const void * src, int n)
   return dest;
 }
 
-extern inline void * memset(void * s, char c, int count)
+static inline void * memset(void * s, char c, int count)
 {
   __asm__("cld\n\t"
           "rep\n\t"

@@ -7,7 +7,11 @@
 
 typedef unsigned int sigset_t;		/* 32 bits */
 
+#define SIGHUP		 1
 #define SIGSEGV		11
+#define SIGCHLD		17
+
+#define SIG_IGN		((void (*)(int))1)
 
 struct sigaction {
     void (*sa_handler)(int);

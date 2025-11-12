@@ -15,8 +15,9 @@
 #define __NR_write	3
 #define __NR_open	4
 #define __NR_close	5
-#define __NR_pause	6
-#define __NR_dup	7
+#define __NR_execve	6
+#define __NR_pause	7
+#define __NR_dup	8
 
 #define _syscall0(type,name) \
 type name(void) \
@@ -63,6 +64,7 @@ extern int errno;
 
 int close(int fildes);
 int dup(int fildes);
+int execve(const char * filename, char ** argv, char ** envp);
 volatile void _exit(int status);
 static int fork(void);
 int open(const char * filename, int flag, ...);

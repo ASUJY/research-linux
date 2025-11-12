@@ -3,6 +3,7 @@
 //
 #include <signal.h>
 
+#include <linux/sched.h>
 #include <linux/kernel.h>
 
 volatile void do_exit(long code);
@@ -82,7 +83,7 @@ void free_page(unsigned long addr) {
     addr -= LOW_MEM;    // 将地址转换为相对于 1MB 的偏移量（因为 mem_map 管理的是从 1MB 开始的页面）
     addr >>= 12;        // 得到物理地址在mem_map数组中的索引
     if (mem_map[addr]--) {    // 如果数组元素的值大于0，则减少该页面的引用计数，直接返回
-        printk("[%s]return: 0x%X\n", __FUNCTION__, addr);
+        //printk("[%s]return: 0x%X\n", __FUNCTION__, addr);
         return;
     }
     mem_map[addr] = 0;
@@ -203,6 +204,34 @@ int copy_page_tables(unsigned long from, unsigned long to, long size) {
     return 0;
 }
 
+unsigned long put_page(unsigned long page, unsigned long address)
+{
+    unsigned long tmp;
+    unsigned long *page_table;
+
+    /* NOTE !!! This uses the fact that _pg_dir=0 */
+
+    if (page < LOW_MEM || page >= HIGH_MEMORY) {
+        printk("Trying to put page %p at %p\n", page, address);
+    }
+    if (mem_map[(page-LOW_MEM)>>12] != 1) {
+        printk("mem_map disagrees with %p at %p\n", page, address);
+    }
+    page_table = (unsigned long *) ((address>>20) & 0xffc); // 找到页目录项
+    if ((*page_table)&1) {
+        page_table = (unsigned long *) (0xfffff000 & *page_table);
+    } else {
+        if (!(tmp = get_free_page())) {
+            return 0;
+        }
+        *page_table = tmp|7;    // 写入页目录项
+        page_table = (unsigned long *) tmp;
+    }
+    page_table[(address>>12) & 0x3ff] = page | 7;   // 写入页表项
+    /* no need for invalidate */
+    return page;
+}
+
 /*
  *  取消写保护页的函数，用于页异常中断过程中写保护异常的处理（写时复制核心实现）
  */
@@ -253,8 +282,129 @@ void do_wp_page(unsigned long error_code, unsigned long address) {
                 *((unsigned long *) ((address>>20) &0xffc)))));
 }
 
+void get_empty_page(unsigned long address)
+{
+    unsigned long tmp;
+
+    if (!(tmp = get_free_page()) || !put_page(tmp, address)) {
+        free_page(tmp);		/* 0 is ok - ignored */
+        oom();
+    }
+}
+
+static int try_to_share(unsigned long address, struct task_struct * p)
+{
+    unsigned long from;
+    unsigned long to;
+    unsigned long from_page;
+    unsigned long to_page;
+    unsigned long phys_addr;
+
+    from_page = to_page = ((address >> 20) & 0xffc);
+    from_page += ((p->start_code>>20) & 0xffc);
+    to_page += ((current->start_code>>20) & 0xffc);
+    /* is there a page-directory at from? */
+    from = *(unsigned long *) from_page;
+    if (!(from & 1)) {
+        return 0;
+    }
+    from &= 0xfffff000;
+    from_page = from + ((address >> 10) & 0xffc);
+    phys_addr = *(unsigned long *) from_page;
+    /* is the page clean and present? */
+    if ((phys_addr & 0x41) != 0x01) {
+        return 0;
+    }
+    phys_addr &= 0xfffff000;
+    if (phys_addr >= HIGH_MEMORY || phys_addr < LOW_MEM) {
+        return 0;
+    }
+    to = *(unsigned long *) to_page;
+    if (!(to & 1)) {
+        if (to = get_free_page()) {
+            *(unsigned long *) to_page = to | 7;
+        } else {
+            oom();
+        }
+    }
+    to &= 0xfffff000;
+    to_page = to + ((address>>10) & 0xffc);
+    if (1 & *(unsigned long *) to_page) {
+        panic("try_to_share: to_page already exists");
+    }
+    /* share them: write-protect */
+    *(unsigned long *) from_page &= ~2;
+    *(unsigned long *) to_page = *(unsigned long *) from_page;
+    invalidate();
+    phys_addr -= LOW_MEM;
+    phys_addr >>= 12;
+    mem_map[phys_addr]++;
+    return 1;
+}
+
+static int share_page(unsigned long address)
+{
+    struct task_struct ** p;
+
+    if (!current->executable) {
+        return 0;
+    }
+    if (current->executable->i_count < 2) {
+        return 0;
+    }
+    for (p = &LAST_TASK; p > &FIRST_TASK; --p) {
+        if (!*p) {
+            continue;
+        }
+        if (current == *p) {
+            continue;
+        }
+        if ((*p)->executable != current->executable) {
+            continue;
+        }
+        if (try_to_share(address, *p)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void do_no_page(unsigned long error_code, unsigned long address) {
-    printk("do_no_page has no content!!!");
+    int nr[4];
+    unsigned long tmp;
+    unsigned long page;
+    int block;
+    int i;
+
+    address &= 0xfffff000;
+    tmp = address - current->start_code;
+    if (!current->executable || tmp >= current->end_data) {
+        get_empty_page(address);
+        return;
+    }
+    if (share_page(tmp)) {
+        return;
+    }
+    if (!(page = get_free_page())) {    // 申请一页空闲物理页
+        oom();
+    }
+    /* remember that 1 block is used for header */
+    block = 1 + tmp/BLOCK_SIZE;
+    for (i = 0; i < 4; block++,i++) {   // 一个数据块 1024 字节，所以一页内存需要读 4 个数据块
+        nr[i] = bmap(current->executable, block); // bmap 负责将相对于文件的数据块编号转换为相对于整个硬盘的数据块编号，比如这个文件的第 1 块数据，可能对应在整个硬盘的第 24 块的位置。
+    }
+    bread_page(page, current->executable->i_dev, nr);
+    i = tmp + 4096 - current->end_data;
+    tmp = page + 4096;
+    while (i-- > 0) {
+        tmp--;
+        *(char *)tmp = 0;
+    }
+    if (put_page(page, address)) {  // 完成页表的映射
+        return;
+    }
+    free_page(page);
+    oom();
 }
 
 /*

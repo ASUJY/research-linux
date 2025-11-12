@@ -2,6 +2,7 @@
 // Created by asujy on 2025/10/29.
 //
 
+#include <string.h>
 #include <sys/stat.h>
 
 #include <linux/sched.h>

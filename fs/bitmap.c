@@ -2,6 +2,8 @@
 // Created by asujy on 2025/10/29.
 //
 
+#include <string.h>
+
 #include <linux/sched.h>
 #include <linux/kernel.h>
 

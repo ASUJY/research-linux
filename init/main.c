@@ -95,6 +95,9 @@ static int printf(const char *fmt, ...) {
     return i;
 }
 
+static char * argv_rc[] = { "/bin/sh", NULL };
+static char * envp_rc[] = { "HOME=/", NULL };
+
 void init(void) {
     int pid;
     setup((void *) &drive_info);
@@ -109,6 +112,8 @@ void init(void) {
         if (open("/etc/rc", O_RDONLY, 0)) {
             _exit(1);
         }
-
+        execve("/bin/sh", argv_rc, envp_rc);
+        _exit(2);
     }
+
 }

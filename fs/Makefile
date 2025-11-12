@@ -1,4 +1,4 @@
-OBJS := buffer.o super.o file_table.o inode.o truncate.o bitmap.o open.o namei.o fcntl.o read_write.o char_dev.o
+OBJS := buffer.o super.o file_table.o inode.o truncate.o bitmap.o open.o namei.o fcntl.o read_write.o char_dev.o exec.o
 FS_BUILD_DIR := $(BUILD)/fs
 CFLAGS := $(CFLAGS) -I../include/ -I../include/linux
 CC	= gcc
