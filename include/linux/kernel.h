@@ -9,6 +9,7 @@
 #ifndef RESEARCH_LINUX_KERNEL_H
 #define RESEARCH_LINUX_KERNEL_H
 
+void verify_area(void * addr,int count);
 volatile void panic(const char * str);
 int printk(const char * fmt, ...);
 void* kmalloc(unsigned int size);

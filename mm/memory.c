@@ -282,6 +282,22 @@ void do_wp_page(unsigned long error_code, unsigned long address) {
                 *((unsigned long *) ((address>>20) &0xffc)))));
 }
 
+void write_verify(unsigned long address)
+{
+    unsigned long page;
+
+    if (!( (page = *((unsigned long *) ((address>>20) & 0xffc)) )&1)) {
+        return;
+    }
+    page &= 0xfffff000;
+    page += ((address>>10) & 0xffc);
+    if ((3 & *(unsigned long *) page) == 1) {
+        /* non-writeable, present */
+        un_wp_page((unsigned long *) page);
+    }
+    return;
+}
+
 void get_empty_page(unsigned long address)
 {
     unsigned long tmp;

@@ -1,4 +1,4 @@
-OBJS := printk.o vsprintf.o sched.o system_call.o traps.o asm.o exit.o panic.o fork.o
+OBJS := printk.o vsprintf.o sched.o system_call.o traps.o asm.o exit.o panic.o fork.o signal.o sys.o
 KERNEL_BUILD_DIR := $(BUILD)/kernel
 CFLAGS := $(CFLAGS) -I../include/ -I../include/linux
 .c.s:

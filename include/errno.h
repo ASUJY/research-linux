@@ -7,6 +7,7 @@
 
 extern int errno;
 
+#define ERROR           99
 #define EPERM		 1
 #define ENOENT		 2
 #define EIO		 5
@@ -21,6 +22,7 @@ extern int errno;
 #define EISDIR		21
 #define EINVAL		22
 #define EMFILE		24
+#define ENOTTY		25
 #define ENOSPC		28
 
 #endif //ERROR_H

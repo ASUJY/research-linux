@@ -200,6 +200,14 @@ static struct super_block * read_super(int dev) {
     return s;
 }
 
+int sys_umount(char * dev_name) {
+
+}
+
+int sys_mount(char * dev_name, char * dir_name, int rw_flag) {
+
+}
+
 /*
  * 挂载根文件系统（安装根文件系统）
  * 在系统启动过程中初始化根文件系统，设置进程的工作目录和根目录。

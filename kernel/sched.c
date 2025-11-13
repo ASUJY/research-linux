@@ -226,6 +226,38 @@ void do_timer(long cpl){
     schedule();
 }
 
+int sys_alarm(long seconds) {
+
+}
+
+int sys_getpid(void) {
+
+}
+
+int sys_getppid(void) {
+
+}
+
+int sys_getuid(void) {
+
+}
+
+int sys_geteuid(void) {
+
+}
+
+int sys_getgid(void) {
+
+}
+
+int sys_getegid(void) {
+
+}
+
+int sys_nice(long increment) {
+
+}
+
 void sched_init(void) {
     int i;
     struct desc_struct *p;

@@ -502,3 +502,23 @@ int open_namei(const char * pathname, int flag, int mode,
     *res_inode = inode;
     return 0;
 }
+
+int sys_mknod(const char * filename, int mode, int dev) {
+
+}
+
+int sys_mkdir(const char * pathname, int mode) {
+
+}
+
+int sys_rmdir(const char * name) {
+
+}
+
+int sys_unlink(const char * name) {
+
+}
+
+int sys_link(const char * oldname, const char * newname) {
+
+}

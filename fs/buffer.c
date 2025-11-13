@@ -26,6 +26,10 @@ static inline void wait_on_buffer(struct buffer_head * bh)
     sti();
 }
 
+int sys_sync(void) {
+
+}
+
 /*
  *  对指定设备进行高速缓冲区数据与设备上数据的同步操作
  *  即将高速缓冲区中的数据写入到磁盘中

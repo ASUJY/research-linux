@@ -9,6 +9,35 @@
 #include <linux/tty.h>
 #include <linux/kernel.h>
 
+int sys_ustat(int dev, struct ustat * ubuf) {
+
+}
+
+int sys_utime(char * filename, struct utimbuf * times) {
+
+}
+
+int sys_access(const char * filename,int mode) {
+
+}
+
+int sys_chdir(const char * filename)
+{
+
+}
+
+int sys_chroot(const char * filename) {
+
+}
+
+int sys_chmod(const char * filename,int mode) {
+
+}
+
+int sys_chown(const char * filename,int uid,int gid) {
+
+}
+
 /*
  * 打开（或创建）文件系统调用函数。
  * 它负责分配文件描述符、文件结构，处理特殊设备文件，并调用底层路径解析函数。
@@ -99,6 +128,10 @@ int sys_open(const char * filename, int flag, int mode) {
     f->f_inode = inode;
     f->f_pos = 0;
     return (fd);
+}
+
+int sys_creat(const char * pathname, int mode) {
+
 }
 
 /*

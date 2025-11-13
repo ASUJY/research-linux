@@ -1,4 +1,4 @@
-OBJS := console.o tty_io.o keyboard.o
+OBJS := console.o tty_io.o keyboard.o tty_ioctl.o
 CHR_DRV_BUILD_DIR := $(BUILD)/kernel/chr_drv
 CFLAGS := $(CFLAGS) -I../../include/
 

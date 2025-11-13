@@ -53,6 +53,10 @@ static void kill_session(void)
     }
 }
 
+int sys_kill(int pid,int sig) {
+
+}
+
 static void tell_father(int pid)
 {
     int i;
@@ -119,4 +123,9 @@ int do_exit(long code)
 int sys_exit(int error_code)
 {
     return do_exit((error_code&0xff)<<8);
+}
+
+int sys_waitpid(pid_t pid,unsigned long * stat_addr, int options)
+{
+
 }
