@@ -132,6 +132,10 @@ volatile void _exit(int status);
 static int fork(void);
 int open(const char * filename, int flag, ...);
 static int pause(void);
+static int sync(void);
+pid_t waitpid(pid_t pid,int * wait_stat,int options);
+pid_t wait(int * wait_stat);
 int write(int fildes, const char * buf, off_t count);
+pid_t setsid(void);
 
 #endif //UNISTD_H

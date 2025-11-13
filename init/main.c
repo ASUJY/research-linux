@@ -7,6 +7,7 @@ static inline pause(void) __attribute__((always_inline));
 static inline _syscall0(int,fork)
 static inline _syscall0(int,pause)
 static inline _syscall1(int,setup,void *,BIOS)
+static inline _syscall0(int,sync)
 
 #include <linux/kernel.h>
 #include <linux/tty.h>
@@ -14,6 +15,7 @@ static inline _syscall1(int,setup,void *,BIOS)
 #include <asm/system.h>
 
 #include <stdarg.h>
+#include <unistd.h>
 #include <fcntl.h>
 
 #include <linux/fs.h>
@@ -98,8 +100,12 @@ static int printf(const char *fmt, ...) {
 static char * argv_rc[] = { "/bin/sh", NULL };
 static char * envp_rc[] = { "HOME=/", NULL };
 
+static char * argv[] = { "-/bin/sh",NULL };
+static char * envp[] = { "HOME=/usr/root", NULL };
+
 void init(void) {
     int pid;
+    int i;
     setup((void *) &drive_info);
     (void) open("/dev/tty0", O_RDWR, 0);
     (void) dup(0);
@@ -115,5 +121,32 @@ void init(void) {
         execve("/bin/sh", argv_rc, envp_rc);
         _exit(2);
     }
+    if (pid>0) {
+        while (pid != wait(&i))
+            /* nothing */;
+    }
+
+    while (1) {
+        if ((pid = fork()) < 0) {
+            printf("Fork failed in init\r\n");
+            continue;
+        }
+        if (!pid) {
+            close(0);close(1);close(2);
+            setsid();
+            (void) open("/dev/tty0",O_RDWR,0);
+            (void) dup(0);
+            (void) dup(0);
+            _exit(execve("/bin/sh",argv,envp));
+        }
+        while (1) {
+            if (pid == wait(&i)) {
+                break;
+            }
+        }
+        printf("\n\rchild %d died with code %04x\n\r",pid,i);
+        sync();
+    }
+    _exit(0);	/* NOTE! _exit, not exit() */
 
 }
