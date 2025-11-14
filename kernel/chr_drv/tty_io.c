@@ -338,3 +338,7 @@ void do_tty_interrupt(int tty)
 {
     copy_to_cooked(tty_table + tty);
 }
+
+void chr_dev_init(void)
+{
+}

@@ -1,6 +1,7 @@
 #define __LIBRARY__
 
 #include <unistd.h>
+#include <time.h>
 
 static inline fork(void) __attribute__((always_inline));
 static inline pause(void) __attribute__((always_inline));
@@ -13,6 +14,7 @@ static inline _syscall0(int,sync)
 #include <linux/tty.h>
 #include <linux/sched.h>
 #include <asm/system.h>
+#include <asm/io.h>
 
 #include <stdarg.h>
 #include <unistd.h>
@@ -25,14 +27,45 @@ static char printbuf[1024];
 extern int vsprintf();
 extern void init(void);
 extern void blk_dev_init(void);
+extern void chr_dev_init(void);
 extern void hd_init(void);
 extern void mem_init(long start, long end);
 extern long rd_init(long mem_start, int length);
+extern long kernel_mktime(struct tm * tm);
 
 // 以下这些数据在setup.asm中已经保存到对应的内存地址中
 #define EXT_MEM_K (*(unsigned short *)0x90002)      // 1M以后的扩展内存大小
 #define DRIVE_INFO (*(struct drive_info *)0x90080)  // 硬盘参数
 #define ORIG_ROOT_DEV (*(unsigned short *)0x901FC)  // 根文件系统所在设备号
+
+#define CMOS_READ(addr) ({ \
+outb_p(0x80|addr,0x70); \
+inb_p(0x71); \
+})
+
+#define BCD_TO_BIN(val) ((val)=((val)&15) + ((val)>>4)*10)
+
+static void time_init(void)
+{
+    struct tm time;
+
+    do {
+        time.tm_sec = CMOS_READ(0);
+        time.tm_min = CMOS_READ(2);
+        time.tm_hour = CMOS_READ(4);
+        time.tm_mday = CMOS_READ(7);
+        time.tm_mon = CMOS_READ(8);
+        time.tm_year = CMOS_READ(9);
+    } while (time.tm_sec != CMOS_READ(0));
+    BCD_TO_BIN(time.tm_sec);
+    BCD_TO_BIN(time.tm_min);
+    BCD_TO_BIN(time.tm_hour);
+    BCD_TO_BIN(time.tm_mday);
+    BCD_TO_BIN(time.tm_mon);
+    BCD_TO_BIN(time.tm_year);
+    time.tm_mon--;
+    startup_time = kernel_mktime(&time);
+}
 
 static long memory_end          = 0;    // 系统物理内存的结束地址（字节）
 static long buffer_memory_end   = 0;    // 高速缓冲区(磁盘缓冲区)的结束地址
@@ -70,15 +103,15 @@ void main(void)		/* This really IS void, no error here. */
     mem_init(main_memory_start, memory_end);
     trap_init();
     blk_dev_init();
+    chr_dev_init();
     tty_init();
+    time_init();
     sched_init();
     buffer_init(buffer_memory_end);
     hd_init();
     printk("Hi OneOS!\n");
-
     sti();
     move_to_user_mode();
-    //int pid = fork();
     if (!fork()) {		/* we count on this going ok */
         init();
     }
