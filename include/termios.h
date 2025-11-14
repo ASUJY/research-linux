@@ -83,6 +83,8 @@ struct termios {
 #define VERASE 2
 #define VKILL 3
 #define VEOF 4
+#define VTIME 5
+#define VMIN 6
 #define VSTART 8
 #define VSTOP 9
 

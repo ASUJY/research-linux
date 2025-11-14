@@ -8,6 +8,8 @@
 typedef unsigned int sigset_t;		/* 32 bits */
 
 #define SIGHUP		 1
+#define SIGINT		 2
+#define SIGQUIT		 3
 #define SIGKILL		 9
 #define SIGSEGV		11
 #define SIGPIPE		13

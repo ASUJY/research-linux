@@ -1,4 +1,9 @@
 #include <ctype.h>
+#include <errno.h>
+
+#define ALRMMASK (1<<(SIGALRM-1))
+#define INTMASK (1<<(SIGINT-1))
+#define QUITMASK (1<<(SIGQUIT-1))
 
 #include <linux/sched.h>
 #include <linux/tty.h>
@@ -54,6 +59,20 @@ struct tty_queue * table_list[]={
 
 void tty_init(void) {
     con_init();
+}
+
+void tty_intr(struct tty_struct * tty, int mask)
+{
+    int i;
+
+    if (tty->pgrp <= 0) {
+        return;
+    }
+    for (i = 0; i < NR_TASKS; i++) {
+        if (task[i] && task[i]->pgrp == tty->pgrp) {
+            task[i]->signal |= mask;
+        }
+    }
 }
 
 static void sleep_if_empty(struct tty_queue * queue)
@@ -138,10 +157,12 @@ void copy_to_cooked(struct tty_struct * tty) {
         }
         if (L_ISIG(tty)) {
             if (c == INTR_CHAR(tty)) {
-
+                tty_intr(tty,INTMASK);
+                continue;
             }
             if (c == QUIT_CHAR(tty)) {
-
+                tty_intr(tty,QUITMASK);
+                continue;
             }
         }
         if (c == 10 || c == EOF_CHAR(tty))
@@ -162,6 +183,81 @@ void copy_to_cooked(struct tty_struct * tty) {
         PUTCH(c, tty->secondary);
     }
     wake_up(&tty->secondary.proc_list);
+}
+
+int tty_read(unsigned channel, char * buf, int nr)
+{
+    struct tty_struct * tty;
+    char c;
+    char * b = buf;
+    int minimum;
+    int time;
+    int flag = 0;
+    long oldalarm;
+
+    if (channel > 2 || nr < 0) {
+        return -1;
+    }
+    tty = &tty_table[channel];
+    oldalarm = current->alarm;
+    time = 10L * tty->termios.c_cc[VTIME];
+    minimum = tty->termios.c_cc[VMIN];
+    if (time && !minimum) {
+        minimum = 1;
+        if (flag = (!oldalarm || time + jiffies < oldalarm)) {
+            current->alarm = time + jiffies;
+        }
+    }
+    if (minimum > nr) {
+        minimum = nr;
+    }
+    while (nr > 0) {
+        if (flag && (current->signal & ALRMMASK)) {
+            current->signal &= ~ALRMMASK;
+            break;
+        }
+        if (current->signal) {
+            break;
+        }
+        if (EMPTY(tty->secondary) || (L_CANON(tty) &&
+        !tty->secondary.data && LEFT(tty->secondary) > 20)) {
+            sleep_if_empty(&tty->secondary);
+            continue;
+        }
+        do {
+            GETCH(tty->secondary, c);
+            if (c == EOF_CHAR(tty) || c == 10) {
+                tty->secondary.data--;
+            }
+            if (c == EOF_CHAR(tty) && L_CANON(tty)) {
+                return (b - buf);
+            } else {
+                put_fs_byte(c, b++);
+                if (!--nr) {
+                    break;
+                }
+            }
+        } while (nr > 0 && !EMPTY(tty->secondary));
+        if (time && !L_CANON(tty)) {
+            if (flag = (!oldalarm || time + jiffies < oldalarm)) {
+                current->alarm = time + jiffies;
+            } else {
+                current->alarm = oldalarm;
+            }
+        }
+        if (L_CANON(tty)) {
+            if (b - buf) {
+                break;
+            }
+        } else if (b-buf >= minimum) {
+            break;
+        }
+    }
+    current->alarm = oldalarm;
+    if (current->signal && !(b-buf)) {
+        return -EINTR;
+    }
+    return (b-buf);
 }
 
 /**
@@ -185,10 +281,11 @@ int tty_write(unsigned channel, char * buf, int nr) {
     tty = channel + tty_table;
     while (nr > 0) {
         sleep_if_full(&tty->write_q);
-        /*
-            if (current->signal)
-			    break;
-        */
+
+        if (current->signal) {
+            break;
+        }
+
         /* 当要写的字节数>0并且tty的写队列不满时，循环处理字符 */
         while (nr > 0 && !FULL(tty->write_q)) {
             c = get_fs_byte(b);
@@ -213,7 +310,7 @@ int tty_write(unsigned channel, char * buf, int nr) {
         /* 若全部字节写完，或者写队列已满，则调用对应的tty的写函数来将字符打印到屏幕中 */
         tty->write(tty);
         if (nr > 0) {
-			schedule();
+            schedule();
         }
     }
     return (b - buf);

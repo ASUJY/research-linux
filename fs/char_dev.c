@@ -7,16 +7,15 @@
 
 #include <linux/sched.h>
 
-//extern int tty_read(unsigned minor,char * buf,int count);
+extern int tty_read(unsigned minor,char * buf,int count);
 extern int tty_write(unsigned minor,char * buf,int count);
 
 typedef (*crw_ptr)(int rw,unsigned minor,char * buf,int count,off_t * pos);
 
 /* 对指定的终端设备进行读写操作 */
 static int rw_ttyx(int rw, unsigned minor, char * buf, int count, off_t * pos) {
-    // return ((rw == READ) ? tty_read(minor, buf, count):
-    //         tty_write(minor, buf, count));
-    return tty_write(minor, buf, count);
+    return ((rw == READ) ? tty_read(minor, buf, count):
+            tty_write(minor, buf, count));
 }
 
 /* 对当前进程的控制终端进行读写操作 */

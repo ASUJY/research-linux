@@ -74,6 +74,13 @@ ret_from_sys_call:
     andl %ebx,%ecx
     bsfl %ecx,%ecx
     je 3f
+    # 对于普通进程进行信号量的处理
+    btrl %ecx,%ebx
+    movl %ebx,signal(%eax)
+    incl %ecx
+    pushl %ecx
+    call do_signal
+    popl %eax
 
     # 恢复上下文
 3:	popl %eax
