@@ -14,7 +14,7 @@ all: Boot ${BUILD}/system.bin
 	@bximage -q -hd=16 -func=create -sectsize=512 -imgmode=flat $(BUILD)/$(HD_IMG_NAME)
 	@dd if=${BUILD}/boot/bootsect.o of=$(BUILD)/$(HD_IMG_NAME) bs=512 seek=0 count=1 conv=notrunc
 	@dd if=${BUILD}/boot/setup.o of=$(BUILD)/$(HD_IMG_NAME) bs=512 seek=1 count=4 conv=notrunc
-	@dd if=${BUILD}/system.bin of=$(BUILD)/$(HD_IMG_NAME) bs=512 seek=5 count=240 conv=notrunc
+	@dd if=${BUILD}/system.bin of=$(BUILD)/$(HD_IMG_NAME) bs=512 seek=5 count=250 conv=notrunc
 
 ${BUILD}/system.bin: ${BUILD}/kernel.bin
 	@objcopy -O binary ${BUILD}/kernel.bin ${BUILD}/system.bin

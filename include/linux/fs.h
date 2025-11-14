@@ -20,6 +20,8 @@
  * 7 - unnamed pipes
  */
 
+#define IS_SEEKABLE(x) ((x)>=1 && (x)<=3)
+
 #define READ 0
 #define WRITE 1
 #define READA 2		/* read-ahead - don't pause */
@@ -44,6 +46,7 @@ void buffer_init(long buffer_end);
 #define NR_HASH 307
 #define NR_BUFFERS nr_buffers
 #define BLOCK_SIZE 1024
+#define BLOCK_SIZE_BITS 10
 
 #ifndef NULL
 #define NULL ((void *)0)
@@ -51,6 +54,10 @@ void buffer_init(long buffer_end);
 
 #define INODES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct d_inode)))
 #define DIR_ENTRIES_PER_BLOCK ((BLOCK_SIZE)/(sizeof (struct dir_entry)))
+
+#define PIPE_HEAD(inode) ((inode).i_zone[0])
+#define PIPE_TAIL(inode) ((inode).i_zone[1])
+#define PIPE_SIZE(inode) ((PIPE_HEAD(inode)-PIPE_TAIL(inode))&(PAGE_SIZE-1))
 
 /*
  * 缓冲区头（buffer_head）是内核用于管理磁盘块缓存的核心数据结构，
@@ -179,12 +186,14 @@ extern int open_namei(const char * pathname, int flag, int mode,
 extern void iput(struct m_inode * inode);
 extern struct m_inode * iget(int dev,int nr);
 extern struct m_inode * get_empty_inode(void);
+extern struct m_inode * get_pipe_inode(void);
 extern struct buffer_head * get_hash_table(int dev, int block);
 extern struct buffer_head * getblk(int dev, int block);
 extern void ll_rw_block(int rw, struct buffer_head * bh);
 extern void brelse(struct buffer_head * buf);
 extern struct buffer_head * bread(int dev,int block);
 extern void bread_page(unsigned long addr,int dev,int b[4]);
+extern struct buffer_head * breada(int dev,int block,...);
 extern int new_block(int dev);
 extern void free_block(int dev, int block);
 extern struct m_inode * new_inode(int dev);

@@ -2,7 +2,10 @@
 // Created by asujy on 2025/9/25.
 //
 
+#include <stdarg.h>
+
 #include <linux/sched.h>
+#include <linux/kernel.h>
 #include <linux/fs.h>
 #include <asm/system.h>
 
@@ -27,7 +30,18 @@ static inline void wait_on_buffer(struct buffer_head * bh)
 }
 
 int sys_sync(void) {
+    int i;
+    struct buffer_head * bh;
 
+    sync_inodes();		/* write out inodes into buffers */
+    bh = start_buffer;
+    for (i = 0; i < NR_BUFFERS; i++,bh++) {
+        wait_on_buffer(bh);
+        if (bh->b_dirt) {
+            ll_rw_block(WRITE, bh);
+        }
+    }
+    return 0;
 }
 
 /*
@@ -348,6 +362,37 @@ void bread_page(unsigned long address,int dev,int b[4])
             brelse(bh[i]);
         }
     }
+}
+
+struct buffer_head * breada(int dev, int first, ...)
+{
+    va_list args;
+    struct buffer_head *bh;
+    struct buffer_head *tmp;
+
+    va_start(args, first);
+    if (!(bh = getblk(dev,first))) {
+        panic("bread: getblk returned NULL\n");
+    }
+    if (!bh->b_uptodate) {
+        ll_rw_block(READ,bh);
+    }
+    while ((first = va_arg(args,int)) >= 0) {
+        tmp = getblk(dev, first);
+        if (tmp) {
+            if (!tmp->b_uptodate) {
+                ll_rw_block(READA, bh);
+            }
+            tmp->b_count--;
+        }
+    }
+    va_end(args);
+    wait_on_buffer(bh);
+    if (bh->b_uptodate) {
+        return bh;
+    }
+    brelse(bh);
+    return (NULL);
 }
 
 /*

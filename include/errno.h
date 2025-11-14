@@ -10,6 +10,7 @@ extern int errno;
 #define ERROR           99
 #define EPERM		 1
 #define ENOENT		 2
+#define ESRCH		 3
 #define EINTR		 4
 #define EIO		 5
 #define ENOEXEC		 8
@@ -19,12 +20,19 @@ extern int errno;
 #define ENOMEM		12    // 内存不足
 #define EACCES		13
 #define EFAULT		14
+#define ENOTBLK		15
+#define EBUSY		16
 #define EEXIST		17
+#define EXDEV		18
 #define ENODEV		19
+#define ENOTDIR		20
 #define EISDIR		21
 #define EINVAL		22
 #define EMFILE		24
 #define ENOTTY		25
 #define ENOSPC		28
+#define ESPIPE		29
+#define ENOSYS		38
+#define ENOTEMPTY	39
 
 #endif //ERROR_H

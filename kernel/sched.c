@@ -9,6 +9,9 @@
 #include <linux/sched.h>
 #include <linux/sys.h>
 
+#define _S(nr) (1<<((nr)-1))
+#define _BLOCKABLE (~(_S(SIGKILL) | _S(SIGSTOP)))
+
 void show_stat(void)
 {
     int i;
@@ -57,7 +60,7 @@ void schedule(void) {
     int c;
     struct task_struct **p;
 
-/*
+
     for(p = &LAST_TASK ; p > &FIRST_TASK ; --p) {
         if (*p) {
             if ((*p)->alarm && (*p)->alarm < jiffies) {
@@ -71,7 +74,6 @@ void schedule(void) {
         }
     }
 
- */
 
     /* 以下是调度程序的主要部分 */
     while (1) {
@@ -227,35 +229,44 @@ void do_timer(long cpl){
 }
 
 int sys_alarm(long seconds) {
+    int old = current->alarm;
 
+    if (old) {
+        old = (old - jiffies) / HZ;
+    }
+    current->alarm = (seconds > 0) ? (jiffies + HZ * seconds) : 0;
+    return (old);
 }
 
 int sys_getpid(void) {
-
+    return current->pid;
 }
 
 int sys_getppid(void) {
-
+    return current->father;
 }
 
 int sys_getuid(void) {
-
+    return current->uid;
 }
 
 int sys_geteuid(void) {
-
+    return current->euid;
 }
 
 int sys_getgid(void) {
-
+    return current->gid;
 }
 
 int sys_getegid(void) {
-
+    return current->egid;
 }
 
 int sys_nice(long increment) {
-
+    if (current->priority - increment > 0) {
+        current->priority -= increment;
+    }
+    return 0;
 }
 
 void sched_init(void) {

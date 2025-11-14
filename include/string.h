@@ -5,6 +5,17 @@
 #ifndef RESEARCH_LINUX_STRING_H
 #define RESEARCH_LINUX_STRING_H
 
+static inline char * strcpy(char * dest,const char *src)
+{
+  __asm__("cld\n"
+    "1:\tlodsb\n\t"
+    "stosb\n\t"
+    "testb %%al,%%al\n\t"
+    "jne 1b"
+    ::"S" (src),"D" (dest):"ax");
+  return dest;
+}
+
 static inline char * strncpy(char * dest,const char *src,int count)
 {
   __asm__("cld\n"
@@ -19,6 +30,25 @@ static inline char * strncpy(char * dest,const char *src,int count)
     "2:"
     ::"S" (src),"D" (dest),"c" (count):"ax");
   return dest;
+}
+
+static inline int strcmp(const char * cs,const char * ct)
+{
+  register int __res __asm__("ax");
+  __asm__("cld\n"
+    "1:\tlodsb\n\t"
+    "scasb\n\t"
+    "jne 2f\n\t"
+    "testb %%al,%%al\n\t"
+    "jne 1b\n\t"
+    "xorl %%eax,%%eax\n\t"
+    "jmp 3f\n"
+    "2:\tmovl $1,%%eax\n\t"
+    "jl 3f\n\t"
+    "negl %%eax\n"
+    "3:"
+    :"=a" (__res):"D" (cs),"S" (ct):);
+  return __res;
 }
 
 static inline char * strchr(const char * s,char c)

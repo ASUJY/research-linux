@@ -67,8 +67,8 @@ ok_load_setup:
     mov ax, SYSSEG
     mov es, ax
     mov di, 0
-    mov cx, 5      ; 从硬盘中的第3个扇区开始读，硬盘的扇区从0开始编号
-    mov bl, 240      ; 读取60个扇区
+    mov cx, 5       ; 从硬盘中的第5个扇区开始读，硬盘的扇区从0开始编号
+    mov bl, 250     ; 读取250个扇区
     call read_hd    ; 执行从硬盘指定位置读取数据到指定内存位置中的操作
 
     jmp SETUPSEG:0      ;跳转到setup.asm继续执行

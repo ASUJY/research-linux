@@ -3,39 +3,133 @@
 //
 
 #include <errno.h>
+#include <fcntl.h>
+#include <utime.h>
 #include <sys/stat.h>
 
 #include <linux/sched.h>
 #include <linux/tty.h>
 #include <linux/kernel.h>
+#include <asm/segment.h>
 
 int sys_ustat(int dev, struct ustat * ubuf) {
-
+    return -ENOSYS;
 }
 
 int sys_utime(char * filename, struct utimbuf * times) {
+    struct m_inode * inode;
+    long actime;
+    long modtime;
 
+    if (!(inode = namei(filename))) {
+        return -ENOENT;
+    }
+    if (times) {
+        actime = get_fs_long((unsigned long *) &times->actime);
+        modtime = get_fs_long((unsigned long *) &times->modtime);
+    } else {
+        actime = modtime = CURRENT_TIME;
+    }
+    inode->i_atime = actime;
+    inode->i_mtime = modtime;
+    inode->i_dirt = 1;
+    iput(inode);
+    return 0;
 }
 
 int sys_access(const char * filename,int mode) {
+    struct m_inode * inode;
+    int res;
+    int i_mode;
 
+    mode &= 0007;
+    if (!(inode = namei(filename))) {
+        return -EACCES;
+    }
+    i_mode = res = inode->i_mode & 0777;
+    iput(inode);
+    if (current->uid == inode->i_uid) {
+        res >>= 6;
+    } else if (current->gid == inode->i_gid) {
+        res >>= 6;
+    }
+    if ((res & 0007 & mode) == mode) {
+        return 0;
+    }
+    /*
+     * XXX we are doing this test last because we really should be
+     * swapping the effective with the real user id (temporarily),
+     * and then calling suser() routine.  If we do call the
+     * suser() routine, it needs to be called last.
+     */
+    if ((!current->uid) && (!(mode & 1) || (i_mode & 0111))) {
+        return 0;
+    }
+    return -EACCES;
 }
 
 int sys_chdir(const char * filename)
 {
+    struct m_inode * inode;
 
+    if (!(inode = namei(filename))) {
+        return -ENOENT;
+    }
+    if (!S_ISDIR(inode->i_mode)) {
+        iput(inode);
+        return -ENOTDIR;
+    }
+    iput(current->pwd);
+    current->pwd = inode;
+    return (0);
 }
 
 int sys_chroot(const char * filename) {
+    struct m_inode * inode;
 
+    if (!(inode = namei(filename))) {
+        return -ENOENT;
+    }
+    if (!S_ISDIR(inode->i_mode)) {
+        iput(inode);
+        return -ENOTDIR;
+    }
+    iput(current->root);
+    current->root = inode;
+    return (0);
 }
 
 int sys_chmod(const char * filename,int mode) {
+    struct m_inode * inode;
 
+    if (!(inode = namei(filename))) {
+        return -ENOENT;
+    }
+    if ((current->euid != inode->i_uid) && !suser()) {
+        iput(inode);
+        return -EACCES;
+    }
+    inode->i_mode = (mode & 07777) | (inode->i_mode & ~07777);
+    inode->i_dirt = 1;
+    iput(inode);
+    return 0;
 }
 
 int sys_chown(const char * filename,int uid,int gid) {
+    struct m_inode * inode;
 
+    if (!(inode = namei(filename))) {
+        return -ENOENT;
+    }
+    if (!suser()) {
+        iput(inode);
+        return -EACCES;
+    }
+    inode->i_uid = uid;
+    inode->i_gid = gid;
+    inode->i_dirt = 1;
+    iput(inode);
+    return 0;
 }
 
 /*
@@ -131,7 +225,7 @@ int sys_open(const char * filename, int flag, int mode) {
 }
 
 int sys_creat(const char * pathname, int mode) {
-
+    return sys_open(pathname, O_CREAT | O_TRUNC, mode);
 }
 
 /*
