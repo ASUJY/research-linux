@@ -12,8 +12,9 @@ blocked = (33*16)
 
 nr_system_calls = 72    # 系统调用总数量
 
-.global system_call,sys_fork,timer_interrupt,sys_execve
-.global hd_interrupt
+.globl system_call,sys_fork,timer_interrupt,sys_execve
+.globl hd_interrupt,floppy_interrupt,parallel_interrupt
+.globl device_not_available, coprocessor_error
 
 # 系统调用出错，设置错误码为-1
 .align 2
@@ -91,6 +92,51 @@ ret_from_sys_call:
 	pop %es
 	pop %ds
 	iret
+
+.align 2
+coprocessor_error:
+	push %ds
+	push %es
+	push %fs
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%eax
+	mov %ax,%ds
+	mov %ax,%es
+	movl $0x17,%eax
+	mov %ax,%fs
+	pushl $ret_from_sys_call
+	jmp math_error
+
+.align 2
+device_not_available:
+	push %ds
+	push %es
+	push %fs
+	pushl %edx
+	pushl %ecx
+	pushl %ebx
+	pushl %eax
+	movl $0x10,%eax
+	mov %ax,%ds
+	mov %ax,%es
+	movl $0x17,%eax
+	mov %ax,%fs
+	pushl $ret_from_sys_call
+	clts				# clear TS so that we can use math
+	movl %cr0,%eax
+	testl $0x4,%eax			# EM (math emulation bit)
+	je math_state_restore
+	pushl %ebp
+	pushl %esi
+	pushl %edi
+	call math_emulate
+	popl %edi
+	popl %esi
+	popl %ebp
+	ret
 
 # 时钟中断处理程序。jiffies(滴答数)每10毫秒加1
 .align 2
@@ -176,5 +222,40 @@ hd_interrupt:
 	pop %ds
 	popl %edx
 	popl %ecx
+	popl %eax
+	iret
+
+floppy_interrupt:
+	pushl %eax
+	pushl %ecx
+	pushl %edx
+	push %ds
+	push %es
+	push %fs
+	movl $0x10,%eax
+	mov %ax,%ds
+	mov %ax,%es
+	movl $0x17,%eax
+	mov %ax,%fs
+	movb $0x20,%al
+	outb %al,$0x20		# EOI to interrupt controller #1
+	xorl %eax,%eax
+	xchgl do_floppy,%eax
+	testl %eax,%eax
+	jne 1f
+	movl $unexpected_floppy_interrupt,%eax
+1:	call *%eax		# "interesting" way of handling intr.
+	pop %fs
+	pop %es
+	pop %ds
+	popl %edx
+	popl %ecx
+	popl %eax
+	iret
+
+parallel_interrupt:
+	pushl %eax
+	movb $0x20,%al
+	outb %al,$0x20
 	popl %eax
 	iret

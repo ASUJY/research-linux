@@ -176,6 +176,10 @@ extern struct buffer_head * start_buffer;
 extern int nr_buffers;
 
 extern void check_disk_change(int dev);
+extern int floppy_change(unsigned int nr);
+extern int ticks_to_floppy_on(unsigned int dev);
+extern void floppy_on(unsigned int dev);
+extern void floppy_off(unsigned int dev);
 extern void truncate(struct m_inode * inode);
 extern void sync_inodes(void);
 extern int bmap(struct m_inode * inode,int block);

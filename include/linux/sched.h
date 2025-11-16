@@ -162,6 +162,7 @@ extern long volatile jiffies;
 extern long startup_time;
 #define CURRENT_TIME (startup_time+jiffies/HZ)
 
+extern void add_timer(long jiffies, void (*fn)(void));
 extern void sleep_on(struct task_struct ** p);
 extern void wake_up(struct task_struct ** p);
 extern void interruptible_sleep_on(struct task_struct ** p);

@@ -61,8 +61,9 @@ static void sysbeep(void);
  * gotoxy函数 认为 x==video_num_columns 是正确的
  */
 static inline void gotoxy(unsigned int new_x, unsigned int new_y) {
-    if (new_x > video_num_columns || new_y >= video_num_lines)
+    if (new_x > video_num_columns || new_y >= video_num_lines) {
         return;
+    }
     x = new_x;
     y = new_y;
     pos = origin + y * video_size_row + (x << 1);
@@ -302,7 +303,7 @@ static void csi_K(int par) {
  */
 void csi_m(void) {
     int i;
-    for (i = 0; i <= npar; i++)
+    for (i = 0; i <= npar; i++) {
         switch (par[i]) {
             case 0:attr=0x07;break;
             case 1:attr=0x0f;break;
@@ -310,6 +311,7 @@ void csi_m(void) {
             case 7:attr=0x70;break;
             case 27:attr=0x07;break;
         }
+    }
 }
 
 /**
@@ -391,8 +393,9 @@ static void delete_char(void) {
     int i;
     unsigned short * p = (unsigned short *) pos;
 
-    if (x >= video_num_columns)
+    if (x >= video_num_columns) {
         return;
+    }
     // 从光标右一个字符开始到行末所有字符左移一格
     i = x;
     while (++i < video_num_columns) {
@@ -425,10 +428,11 @@ static void delete_line(void) {
  */
 static void csi_at(unsigned int nr) {
     // 如果插入的字符数大于一行字符数，则截为一行字符数；若插入字符数nr为0，则插入1个字符。
-    if (nr > video_num_columns)
+    if (nr > video_num_columns) {
         nr = video_num_columns;
-    else if (!nr)
+    } else if (!nr) {
         nr = 1;
+    }
     // 循环插入指定的字符数。
     while (nr--) {
         insert_char();
@@ -442,13 +446,15 @@ static void csi_at(unsigned int nr) {
  */
 static void csi_L(unsigned int nr) {
     // 如果插入的行数大于屏幕最多行数，则截为屏幕显示行数；若插入行数nr为0，则插入1行。
-    if (nr > video_num_lines)
+    if (nr > video_num_lines) {
         nr = video_num_lines;
-    else if (!nr)
+    } else if (!nr) {
         nr = 1;
+    }
     // 循环插入指定行数nr。
-    while (nr--)
+    while (nr--) {
         insert_line();
+    }
 }
 
 /**
@@ -458,13 +464,15 @@ static void csi_L(unsigned int nr) {
  */
 static void csi_P(unsigned int nr) {
     // 如果删除的字符数大于一行字符数，则截为一行字符数；若删除字符数nr为0，则删除1个字符。
-    if (nr > video_num_columns)
+    if (nr > video_num_columns) {
         nr = video_num_columns;
-    else if (!nr)
+    } else if (!nr) {
         nr = 1;
+    }
     // 循环删除指定字符数nr。
-    while (nr--)
+    while (nr--) {
         delete_char();
+    }
 }
 
 /**
@@ -474,13 +482,15 @@ static void csi_P(unsigned int nr) {
  */
 static void csi_M(unsigned int nr) {
     // 如果删除的行数大于屏幕最多行数，则截为屏幕显示行数；若删除的行数nr为0，则删除1行。
-    if (nr > video_num_lines)
+    if (nr > video_num_lines) {
         nr = video_num_lines;
-    else if (!nr)
+    } else if (!nr) {
         nr = 1;
+    }
     // 循环删除指定行数nr。
-    while (nr--)
+    while (nr--) {
         delete_line();
+    }
 }
 
 static int saved_x = 0; // 保存的光标列号
@@ -568,12 +578,16 @@ void con_write(struct tty_struct *tty) {
                     restore_cur();
                 break;
             case 2: // 收到 ESC[ 后的状态（CSI序列开始）
-                for (npar = 0; npar < NPAR; npar++) // 对ESC转义字符序列参数使用的处理数组par[]清零，索引变量npar指向首项，并且设置状态为3
+                for (npar = 0; npar < NPAR; npar++) {
+                    // 对ESC转义字符序列参数使用的处理数组par[]清零，索引变量npar指向首项，并且设置状态为3
                     par[npar] = 0;
+                }
                 npar = 0;
                 state = 3;
-                if (ques = (c == '?'))  // 如字符不是'？'，则直接转到状态3去处理，否则去读一字符，再到状态3处理
+                if (ques = (c == '?')) {
+                    // 如字符不是'？'，则直接转到状态3去处理，否则去读一字符，再到状态3处理
                     break;
+                }
             case 3: // 解析CSI参数（数字部分）
                 if (c == ';' && npar < NPAR - 1) {  // 如果字符是';'，并且数组par未满，则索引值加1
                     npar++;
@@ -742,6 +756,12 @@ void con_init(void) {
     a=inb_p(0x61);                              // 读取键盘端口0x61(8255A端口PB)
     outb_p(a|0x80, 0x61);                       // 设置禁止键盘工作(位7置位)
     outb(a, 0x61);                              // 允许键盘工作，复位键盘
+}
+
+void sysbeepstop(void)
+{
+    /* disable counter 2 */
+    outb(inb_p(0x61)&0xFC, 0x61);
 }
 
 int beepcount = 0;

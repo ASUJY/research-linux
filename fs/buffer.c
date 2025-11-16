@@ -112,10 +112,10 @@ void check_disk_change(int dev) {
     if (MAJOR(dev) != 2) {
         return;
     }
-    // 目前没有使用软盘，所以注释掉软盘部分代码
-    // if (!floppy_change(dev & 0x03)) {
-    //     return;
-    // }
+    // 目前没有使用软盘
+    if (!floppy_change(dev & 0x03)) {
+        return;
+    }
     for (i = 0; i < NR_SUPER; i++) {
         if (super_block[i].s_dev == dev) {
             put_super(super_block[i].s_dev);
@@ -263,8 +263,9 @@ repeat:
     while (bh->b_dirt) {
         sync_dev(bh->b_dev);	// 同步写入设备，确保数据持久化
         wait_on_buffer(bh);     // 阻塞当前进程，等待写操作完成并释放锁
-        if (bh->b_count)
+        if (bh->b_count) {
             goto repeat;
+        }
     }
     if (find_buffer(dev,block)) {
         goto repeat;

@@ -69,6 +69,8 @@ struct termios {
 
 /* c_cflag bit meaning */
 #define CBAUD	0000017
+#define  B2400	0000013
+#define   CS8	0000060
 
 /* c_lflag bits */
 #define ISIG	0000001

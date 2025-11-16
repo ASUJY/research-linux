@@ -6,6 +6,7 @@
 #include <errno.h>
 
 #include <linux/sched.h>
+#include <linux/kernel.h>
 #include <asm/system.h>
 
 extern void write_verify(unsigned long address);

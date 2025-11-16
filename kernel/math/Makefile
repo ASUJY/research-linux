@@ -1,5 +1,5 @@
-OBJS := ramdisk.o hd.o ll_rw_blk.o floppy.o
-BLK_DRV_BUILD_DIR := $(BUILD)/kernel/blk_drv
+OBJS := math_emulate.o
+MATH_BUILD_DIR := $(BUILD)/kernel/math
 CFLAGS := $(CFLAGS) -I./ -I../../include
 
 .c.s:
@@ -9,12 +9,12 @@ CFLAGS := $(CFLAGS) -I./ -I../../include
 .c.o:
 	@$(CC) $(CFLAGS) $(DEBUG) -c -o $*.o $<
 
-$(BLK_DRV_BUILD_DIR)/blk_drv.a: dep CREATE_BLK_DRV_BUILD_DIR $(OBJS)
-	@$(AR) rcs ${BLK_DRV_BUILD_DIR}/blk_drv.a $(OBJS)
+$(MATH_BUILD_DIR)/math.a: dep CREATE_MATH_BUILD_DIR $(OBJS)
+	@$(AR) rcs ${MATH_BUILD_DIR}/math.a $(OBJS)
 	@sync
 
-CREATE_BLK_DRV_BUILD_DIR:
-	@mkdir -p ${BLK_DRV_BUILD_DIR}
+CREATE_MATH_BUILD_DIR:
+	@mkdir -p ${MATH_BUILD_DIR}
 
 clean:
 	@rm -f core *.o *.a *.d

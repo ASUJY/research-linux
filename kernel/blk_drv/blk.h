@@ -58,10 +58,15 @@ extern struct task_struct * wait_for_request;
 /* ram disk */
 #define DEVICE_NAME "ramdisk"
 #define DEVICE_REQUEST do_rd_request
+#define DEVICE_OFF(device)
 
 #elif (MAJOR_NR == 2)
 /* floppy */
 #define DEVICE_NAME "floppy"
+#define DEVICE_INTR do_floppy
+#define DEVICE_REQUEST do_fd_request
+#define DEVICE_NR(device) ((device) & 3)
+#define DEVICE_OFF(device) floppy_off(DEVICE_NR(device))
 
 #elif (MAJOR_NR == 3)
 /* harddisk */

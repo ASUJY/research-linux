@@ -30,7 +30,7 @@
 #define O_NLRET(tty)	_O_FLAG((tty),ONLRET)
 #define O_LCUC(tty)	_O_FLAG((tty),OLCUC)
 
-struct tty_struct tty_table[1] = {
+struct tty_struct tty_table[] = {
     {
         {ICRNL,            /* 将输入的CR转换为NL */
          OPOST | ONLCR,    /* 将输出的NL转为CRNL */
@@ -44,6 +44,32 @@ struct tty_struct tty_table[1] = {
         {0, 0, 0, 0, {0}},        /* console read-queue */
         {0, 0, 0, 0, {0}},        /* console write-queue */
         {0, 0, 0, 0, {0}}
+    },{
+	{0, /* no translation */
+        0,  /* no translation */
+        B2400 | CS8,
+        0,
+        0,
+        INIT_C_CC},
+        0,
+        0,
+        rs_write,
+        {0x3f8,0,0,0,""},		/* rs 1 */
+        {0x3f8,0,0,0,""},
+        {0,0,0,0,""}
+    },{
+	{0, /* no translation */
+        0,  /* no translation */
+        B2400 | CS8,
+        0,
+        0,
+        INIT_C_CC},
+        0,
+        0,
+        rs_write,
+        {0x2f8,0,0,0,""},		/* rs 2 */
+        {0x2f8,0,0,0,""},
+        {0,0,0,0,""}
     }
 };
 
@@ -54,10 +80,13 @@ struct tty_struct tty_table[1] = {
  * 这是keyboard.S使用的缓冲队列地址表。
  */
 struct tty_queue * table_list[]={
-    &tty_table[0].read_q, &tty_table[0].write_q // 控制台终端的读、写缓冲队列地址
-    };
+    &tty_table[0].read_q, &tty_table[0].write_q, // 控制台终端的读、写缓冲队列地址
+    &tty_table[1].read_q, &tty_table[1].write_q,
+    &tty_table[2].read_q, &tty_table[2].write_q
+};
 
 void tty_init(void) {
+    rs_init();
     con_init();
 }
 
@@ -86,14 +115,14 @@ static void sleep_if_empty(struct tty_queue * queue)
 
 static void sleep_if_full(struct tty_queue * queue)
 {
-	if (!FULL(*queue)) {
-		return;
-	}
-	cli();
-	while (/*!current->signal && */LEFT(*queue) < 128) {
-		interruptible_sleep_on(&queue->proc_list);
-	}
-	sti();
+    if (!FULL(*queue)) {
+	return;
+    }
+    cli();
+    while (!current->signal && LEFT(*queue) < 128) {
+	interruptible_sleep_on(&queue->proc_list);
+    }
+    sti();
 }
 
 void wait_for_keypress(void)
@@ -316,20 +345,6 @@ int tty_write(unsigned channel, char * buf, int nr) {
     return (b - buf);
 }
 
-/*
- * Jeh, sometimes I really like the 386.
- * This routine is called from an interrupt,
- * and there should be absolutely no problem
- * with sleeping even in an interrupt (I hope).
- * Of course, if somebody proves me wrong, I'll
- * hate intel for all time :-). We'll have to
- * be careful and see to reinstating the interrupt
- * chips before calling this, though.
- *
- * I don't think we sleep here under normal circumstances
- * anyway, which is good, as the task sleeping might be
- * totally innocent.
- */
 /**
  * tty中断例程调用的函数，用于输出字符
  * @param tty tty终端号

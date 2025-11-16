@@ -58,6 +58,7 @@ __asm__("cld;rep;insw"::"d" (port),"D" (buf),"c" (nr))
 __asm__("cld;rep;outsw"::"d" (port),"S" (buf),"c" (nr))
 
 extern void hd_interrupt(void);
+extern void rd_load(void);
 
 /* 负责读取硬盘参数信息、读取分区表信息并初始化硬盘分区结构hd，加载根文件系统 */
 int sys_setup(void * BIOS)
@@ -138,7 +139,7 @@ int sys_setup(void * BIOS)
     if (NR_HD) {
         printk("Partition table%s ok.\n\r", (NR_HD > 1) ? "s" : "");
     }
-    // rd_load();
+    rd_load();
     mount_root();   // 挂载根文件系统
     return 0;
 }

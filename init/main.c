@@ -29,9 +29,11 @@ extern void init(void);
 extern void blk_dev_init(void);
 extern void chr_dev_init(void);
 extern void hd_init(void);
+extern void floppy_init(void);
 extern void mem_init(long start, long end);
 extern long rd_init(long mem_start, int length);
 extern long kernel_mktime(struct tm * tm);
+extern long startup_time;
 
 // 以下这些数据在setup.asm中已经保存到对应的内存地址中
 #define EXT_MEM_K (*(unsigned short *)0x90002)      // 1M以后的扩展内存大小
@@ -109,6 +111,7 @@ void main(void)		/* This really IS void, no error here. */
     sched_init();
     buffer_init(buffer_memory_end);
     hd_init();
+    floppy_init();
     printk("Hi OneOS!\n");
     sti();
     move_to_user_mode();
@@ -181,5 +184,4 @@ void init(void) {
         sync();
     }
     _exit(0);	/* NOTE! _exit, not exit() */
-
 }

@@ -442,3 +442,30 @@ void mem_init(long start_mem, long end_mem) {
         mem_map[i++] = 0;
     }
 }
+
+void calc_mem(void)
+{
+    int i;
+    int j;
+    int k;
+    int free=0;
+    long * pg_tbl;
+
+    for (i = 0; i < PAGING_PAGES; i++) {
+        if (!mem_map[i]) {
+            free++;
+        }
+    }
+    printk("%d pages free (of %d)\n\r",free,PAGING_PAGES);
+    for (i = 2; i < 1024; i++) {
+        if (1 & _pg_dir[i]) {
+            pg_tbl = (long *) (0xfffff000 & _pg_dir[i]);
+            for (j = k = 0; j < 1024; j++) {
+                if (pg_tbl[j]&1) {
+                    k++;
+                }
+            }
+            printk("Pg-dir[%d] uses %d pages\n",i,k);
+        }
+    }
+}

@@ -9,6 +9,7 @@ extern stack_start
 global _idt
 global _gdt
 global _pg_dir
+global tmp_floppy_area
 global startup_32
 _pg_dir:    ;页目录会存放到这里
 startup_32:
@@ -83,6 +84,10 @@ pg2:
     resb 4096
 pg3:
     resb 4096
+
+
+tmp_floppy_area:
+    times 128 dq 0
 
 after_page_tables:
     push 0  ;envp

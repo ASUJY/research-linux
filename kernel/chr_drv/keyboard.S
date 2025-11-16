@@ -244,7 +244,7 @@ func:
     pushl %eax
     pushl %ecx
     pushl %edx
-    // call show_stat      /* 调用显示各任务状态函数 */
+    call show_stat      /* 调用显示各任务状态函数 */
     popl %edx
     popl %ecx
     popl %eax
